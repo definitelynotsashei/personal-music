@@ -47,6 +47,16 @@ test('top-level app navigation tabs exist in the shell', () => {
   assert.match(html, /data-section="settings"/);
 });
 
+test('home shortcuts and playlist detail surfaces exist', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+  assert.match(html, /data-target-section="library"/);
+  assert.match(html, /data-target-section="playlists"/);
+  assert.match(html, /data-target-section="settings"/);
+  assert.match(html, /id="playlist-detail-panel"/);
+  assert.match(html, /id="playlist-track-list"/);
+});
+
 test('pwa shell assets exist', () => {
   [
     'manifest.json',

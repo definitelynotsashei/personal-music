@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-04-16 - Section Ownership Slice
+
+### Features
+- Tightened the tabbed shell so Home, Library, Playlists, Now Playing, and Settings own clearer responsibilities instead of behaving like one shared surface.
+- Gave Playlists a selected-playlist detail area, narrowed Library search back to library browsing concerns, and moved current limitations into Settings.
+
+### Documentation
+- Documented the stronger section-ownership rule inside the app shell so future UI work does not drift back toward one overloaded page.
+
+### Tests
+- Expanded regression coverage for section-jump controls and dedicated playlist-detail surface markup.
+
 ## 2026-04-16 - App Shell Navigation Slice
 
 ### Features

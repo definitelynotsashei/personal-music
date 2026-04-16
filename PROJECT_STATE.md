@@ -4,7 +4,7 @@ _Last updated 2026-04-16. For context-sharing, not a coding reference._
 ---
 
 ## In Progress
-Starting the next durable file-access slice: improving local-library reopening beyond the current session-only playback source model.
+Returning to the next durable file-access slice after tightening tab ownership so the shell behaves more like distinct app surfaces than one long page.
 
 ---
 
@@ -24,6 +24,7 @@ A local-first personal music player intended for your own library, with a focus 
 - The first search slice now supports ranked library search across tracks, albums, artists, playlists, and liked music.
 - The PWA shell now has a manifest, install prompt handling, cached shell assets, and clearer offline/install messaging.
 - The current UI direction is a cozy late-night listening-den aesthetic with muted earthy tones, soft glass panels, hand-drawn iconography, a sticky bottom player bar, calm motion, a mobile-expanded now-playing room, and a tabbed app shell that separates the main surfaces.
+- Section ownership is stricter now: Home is a lighter dashboard, Library owns browsing and search, Playlists owns playlist selection and detail, Now Playing owns the full player and queue, and Settings owns import/install/offline context plus current limitations.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
 ### Current product snapshot
@@ -34,7 +35,7 @@ A local-first personal music player intended for your own library, with a focus 
 - Current v1 target: local library import, playback, queue, playlists, search, and mobile-friendly now-playing.
 - Explicit non-goals for v1: streaming backend, commercial catalog support, scraping, accounts, live sync, recommendations, and social features.
 - The current UI is moving toward a cozy, readable, low-stress player surface rather than a bright utility dashboard.
-- The main shell is now organized into Home, Library, Playlists, Now Playing, and Settings views to reduce main-page sprawl.
+- The main shell is now organized into Home, Library, Playlists, Now Playing, and Settings views with stronger separation of responsibilities to reduce main-page sprawl.
 
 ### Stronger v1 status
 - Defined, but not reached yet.
@@ -55,6 +56,7 @@ A local-first personal music player intended for your own library, with a focus 
 
 ### Current recommended next task
 - Improve the next durable file-access slice so the persisted library is closer to playable after reload.
+- Tomorrow's starting point should be durable file access, not more shell breadth, with any `app.js` cleanup kept strictly in support of that work.
 
 ---
 

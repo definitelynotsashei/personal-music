@@ -26,6 +26,9 @@ const serviceWorkerSupported = 'serviceWorker' in navigator;
 const fileInput = document.querySelector('#file-input');
 const folderInput = document.querySelector('#folder-input');
 const importStatus = document.querySelector('#import-status');
+const homeCurrentTrack = document.querySelector('#home-current-track');
+const homeCurrentMeta = document.querySelector('#home-current-meta');
+const homeSessionNote = document.querySelector('#home-session-note');
 const connectionStatus = document.querySelector('#connection-status');
 const offlineNote = document.querySelector('#offline-note');
 const installStatus = document.querySelector('#install-status');
@@ -40,6 +43,7 @@ const albumList = document.querySelector('#album-list');
 const artistList = document.querySelector('#artist-list');
 const appTabs = document.querySelectorAll('.app-tab');
 const appViews = document.querySelectorAll('.app-view');
+const sectionJumpButtons = document.querySelectorAll('.section-jump-button');
 const browseTabs = document.querySelectorAll('.browse-tab');
 const searchInput = document.querySelector('#library-search-input');
 const clearSearchButton = document.querySelector('#clear-search-button');
@@ -48,6 +52,10 @@ const playlistControls = document.querySelector('#playlist-controls');
 const playlistNameInput = document.querySelector('#playlist-name-input');
 const createPlaylistButton = document.querySelector('#create-playlist-button');
 const playlistSelect = document.querySelector('#playlist-select');
+const playlistDetailTitle = document.querySelector('#playlist-detail-title');
+const playlistDetailMeta = document.querySelector('#playlist-detail-meta');
+const playlistDetailEmptyState = document.querySelector('#playlist-detail-empty-state');
+const playlistTrackList = document.querySelector('#playlist-track-list');
 const clearLibraryButton = document.querySelector('#clear-library');
 const audioPlayer = document.querySelector('#audio-player');
 const playerPanel = document.querySelector('#player-panel');
@@ -359,6 +367,24 @@ function updateSummary() {
   albumCount.textContent = String(summary.albumCount);
 }
 
+function updateHomeSession() {
+  const currentTrack = getCurrentTrack();
+
+  if (!currentTrack) {
+    homeCurrentTrack.textContent = 'Nothing playing';
+    homeCurrentMeta.textContent = 'Import local files to start playback.';
+    homeSessionNote.textContent =
+      'Your queue, playlists, and browsing live in their own tabs now, so home can stay calm and lightweight.';
+    return;
+  }
+
+  homeCurrentTrack.textContent = currentTrack.title;
+  homeCurrentMeta.textContent = `${currentTrack.artist} | ${currentTrack.album}`;
+  homeSessionNote.textContent = canPlayTrack(currentTrack)
+    ? 'Playback is active for files imported in this browser session. Use Now Playing for queue control and the full player.'
+    : 'This track came back from saved metadata. Re-import the original files in this session when you want playback again.';
+}
+
 function syncTransportButtons() {
   const currentTrack = getCurrentTrack();
   const hasTracks = state.tracks.length > 0;
@@ -558,59 +584,70 @@ function renderQueue() {
     : 'The queue follows an explicit session order. Add tracks or toggle shuffle to change playback flow.';
 }
 
-function renderTracksView(tracksToRender = state.tracks) {
-  trackList.innerHTML = '';
+function createTrackRowElement(track, options = {}) {
+  const article = document.createElement('article');
+  const isCurrent = track.id === state.player.currentTrackId;
+  const showPlaylistAction = options.showPlaylistAction !== false;
+  const showQueueAction = options.showQueueAction !== false;
+  const detailText =
+    options.detailText ??
+    `${formatDuration(track.duration)}${track.relativePath || track.filename ? ` | ${track.relativePath || track.filename}` : ''}`;
+
+  article.className = 'track-row';
+  if (isCurrent) {
+    article.dataset.current = 'true';
+  }
+
+  const actionLabel = isCurrent && !state.player.paused ? 'Pause' : 'Play';
+  const playbackDisabled = canPlayTrack(track) ? '' : 'disabled';
+  const liked = isLiked(track.id);
+  article.innerHTML = `
+    <div class="track-index">${track.trackNumber ?? '-'}</div>
+    <div class="track-main">
+      <strong>${track.title}</strong>
+      <p>${track.artist} | ${track.album}</p>
+    </div>
+    <div class="track-actions">
+      <button class="track-play-button icon-button icon-button-secondary" type="button" data-track-id="${track.id}" aria-label="${actionLabel}" title="${actionLabel}" ${playbackDisabled}>
+        ${getIconMarkup(isCurrent && !state.player.paused ? 'pause' : 'play')}
+        <span class="sr-only">${actionLabel}</span>
+      </button>
+      <button class="track-like-button icon-button icon-button-secondary" type="button" data-track-id="${track.id}" data-active="${liked}" aria-label="${liked ? 'Unlike track' : 'Like track'}" title="${liked ? 'Unlike track' : 'Like track'}">
+        ${getIconMarkup('heart')}
+        <span class="sr-only">${liked ? 'Unlike track' : 'Like track'}</span>
+      </button>
+      ${showPlaylistAction ? `<button class="track-playlist-button button button-secondary" type="button" data-track-id="${track.id}">Add To Playlist</button>` : ''}
+      ${showQueueAction ? `<button class="track-queue-button button button-secondary" type="button" data-track-id="${track.id}">Play Next</button>` : ''}
+    </div>
+    <div class="track-meta">
+      <span>${detailText}</span>
+    </div>
+  `;
+
+  return article;
+}
+
+function renderTrackRows(container, tracksToRender = state.tracks, options = {}) {
+  container.innerHTML = '';
 
   if (tracksToRender.length === 0) {
-    trackList.hidden = true;
-    return;
+    container.hidden = true;
+    return false;
   }
 
   const fragment = document.createDocumentFragment();
 
   tracksToRender.forEach(track => {
-    const article = document.createElement('article');
-    const isCurrent = track.id === state.player.currentTrackId;
-    article.className = 'track-row';
-    if (isCurrent) {
-      article.dataset.current = 'true';
-    }
-
-    const actionLabel = isCurrent && !state.player.paused ? 'Pause' : 'Play';
-    const playbackDisabled = canPlayTrack(track) ? '' : 'disabled';
-    const liked = isLiked(track.id);
-    article.innerHTML = `
-      <div class="track-index">${track.trackNumber ?? '-'}</div>
-      <div class="track-main">
-        <strong>${track.title}</strong>
-        <p>${track.artist} | ${track.album}</p>
-      </div>
-      <div class="track-actions">
-        <button class="track-play-button icon-button icon-button-secondary" type="button" data-track-id="${track.id}" aria-label="${actionLabel}" title="${actionLabel}" ${playbackDisabled}>
-          ${getIconMarkup(isCurrent && !state.player.paused ? 'pause' : 'play')}
-          <span class="sr-only">${actionLabel}</span>
-        </button>
-        <button class="track-like-button icon-button icon-button-secondary" type="button" data-track-id="${track.id}" data-active="${liked}" aria-label="${liked ? 'Unlike track' : 'Like track'}" title="${liked ? 'Unlike track' : 'Like track'}">
-          ${getIconMarkup('heart')}
-          <span class="sr-only">${liked ? 'Unlike track' : 'Like track'}</span>
-        </button>
-        <button class="track-playlist-button button button-secondary" type="button" data-track-id="${track.id}">
-          Add To Playlist
-        </button>
-        <button class="track-queue-button button button-secondary" type="button" data-track-id="${track.id}">
-          Play Next
-        </button>
-      </div>
-      <div class="track-meta">
-        <span>${formatDuration(track.duration)}</span>
-        <span>${track.relativePath || track.filename}</span>
-      </div>
-    `;
-    fragment.append(article);
+    fragment.append(createTrackRowElement(track, options));
   });
 
-  trackList.append(fragment);
-  trackList.hidden = false;
+  container.append(fragment);
+  container.hidden = false;
+  return true;
+}
+
+function renderTracksView(tracksToRender = state.tracks) {
+  renderTrackRows(trackList, tracksToRender);
 }
 
 function renderAlbumsView() {
@@ -673,6 +710,8 @@ function renderArtistsView() {
 
 function renderPlaylistsView() {
   playlistList.innerHTML = '';
+  playlistTrackList.innerHTML = '';
+  ensureSelectedPlaylist();
 
   if (state.playlists.length === 0) {
     playlistList.hidden = false;
@@ -682,6 +721,11 @@ function renderPlaylistsView() {
         <p>Create a playlist here, then add tracks from your library results and track rows.</p>
       </div>
     `;
+    playlistDetailTitle.textContent = 'Pick a playlist';
+    playlistDetailMeta.textContent =
+      'Create a playlist here, then add tracks from the library when you want to shape a listening set.';
+    playlistDetailEmptyState.hidden = false;
+    playlistTrackList.hidden = true;
     return;
   }
 
@@ -716,6 +760,39 @@ function renderPlaylistsView() {
 
   playlistList.append(fragment);
   playlistList.hidden = false;
+
+  const selectedPlaylist = getPlaylistById(state.selectedPlaylistId);
+  if (!selectedPlaylist) {
+    playlistDetailTitle.textContent = 'Pick a playlist';
+    playlistDetailMeta.textContent =
+      'Choose a playlist card to inspect its full track list and keep playlist work separate from the library browser.';
+    playlistDetailEmptyState.hidden = false;
+    playlistTrackList.hidden = true;
+    return;
+  }
+
+  const playlistTracks = selectedPlaylist.trackIds
+    .map(trackId => getTrackById(trackId))
+    .filter(Boolean);
+
+  playlistDetailTitle.textContent = selectedPlaylist.name;
+  playlistDetailMeta.textContent =
+    `${playlistTracks.length} track${playlistTracks.length === 1 ? '' : 's'} selected. Add more from the Library tab when you want to keep building this set.`;
+
+  if (playlistTracks.length === 0) {
+    playlistDetailEmptyState.hidden = false;
+    playlistDetailEmptyState.innerHTML = `
+      <h3>This playlist is still empty</h3>
+      <p>Open the Library tab, then use Add To Playlist on any track row to start filling "${selectedPlaylist.name}".</p>
+    `;
+    playlistTrackList.hidden = true;
+    return;
+  }
+
+  playlistDetailEmptyState.hidden = true;
+  renderTrackRows(playlistTrackList, playlistTracks, {
+    detailText: 'Saved to this playlist'
+  });
 }
 
 function renderLikedView() {
@@ -753,14 +830,13 @@ function renderSearchResults() {
   const totalMatches =
     results.tracks.length +
     results.albums.length +
-    results.artists.length +
-    results.playlists.length;
+    results.artists.length;
 
   if (totalMatches === 0) {
     searchResults.innerHTML = `
       <div class="empty-state">
         <h3>No matches yet</h3>
-        <p>Try a track title, artist, album, or playlist name from your local library.</p>
+        <p>Try a track title, artist, or album name from your local library.</p>
       </div>
     `;
     return;
@@ -804,37 +880,6 @@ function renderSearchResults() {
                 </article>
               `;
             })
-            .join('')}
-        </div>
-      </section>
-    `);
-  }
-
-  if (results.playlists.length > 0) {
-    sections.push(`
-      <section class="search-section">
-        <div class="search-section-header">
-          <p class="summary-label">Playlists</p>
-          <strong>${results.playlists.length} match${results.playlists.length === 1 ? '' : 'es'}</strong>
-        </div>
-        <div class="browse-grid">
-          ${results.playlists
-            .map(playlist => `
-              <article class="browse-card">
-                <p class="summary-label">Playlist</p>
-                <strong>${playlist.name}</strong>
-                <p class="browse-meta">${playlist.trackIds.length} track${playlist.trackIds.length === 1 ? '' : 's'}</p>
-                <button class="button button-secondary playlist-select-button" type="button" data-playlist-id="${playlist.id}">
-                  ${playlist.id === state.selectedPlaylistId ? 'Selected Playlist' : 'Select Playlist'}
-                </button>
-                <div class="browse-chip-list">
-                  ${playlist.tracks
-                    .slice(0, 4)
-                    .map(track => `<button class="browse-chip" type="button" data-track-id="${track.id}">${track.title}</button>`)
-                    .join('')}
-                </div>
-              </article>
-            `)
             .join('')}
         </div>
       </section>
@@ -902,6 +947,7 @@ function renderLibraryBrowser() {
   updatePlaylistControls();
   updateSearchControls();
   renderPlaylistsView();
+  updateHomeSession();
 
   if (state.tracks.length === 0 && state.playlists.length === 0) {
     emptyState.hidden = false;
@@ -1346,6 +1392,7 @@ function handleTrackListClick(event) {
   const playlistSelectButton = event.target.closest('.playlist-select-button');
   if (playlistSelectButton) {
     state.selectedPlaylistId = playlistSelectButton.dataset.playlistId || null;
+    setAppSection('playlists');
     renderLibraryBrowser();
     return;
   }
@@ -1485,11 +1532,15 @@ folderInput?.addEventListener('change', event => handleImport(event.target.files
 clearLibraryButton?.addEventListener('click', handleClearLibrary);
 trackList?.addEventListener('click', handleTrackListClick);
 playlistList?.addEventListener('click', handleTrackListClick);
+playlistTrackList?.addEventListener('click', handleTrackListClick);
 albumList?.addEventListener('click', handleTrackListClick);
 artistList?.addEventListener('click', handleTrackListClick);
 searchResults?.addEventListener('click', handleTrackListClick);
 appTabs.forEach(tab => {
   tab.addEventListener('click', () => setAppSection(tab.dataset.section));
+});
+sectionJumpButtons.forEach(button => {
+  button.addEventListener('click', () => setAppSection(button.dataset.targetSection));
 });
 browseTabs.forEach(tab => {
   tab.addEventListener('click', () => setBrowseView(tab.dataset.view));

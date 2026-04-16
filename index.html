@@ -86,6 +86,58 @@
             No library imported yet. Start with a folder from your desktop music collection.
           </p>
         </section>
+
+        <section class="panel home-shortcuts-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">Quick moves</p>
+              <h2>Go where the task belongs</h2>
+            </div>
+          </div>
+
+          <div class="home-shortcuts-grid">
+            <button class="shortcut-card section-jump-button" type="button" data-target-section="library">
+              <p class="summary-label">Library</p>
+              <strong>Browse tracks</strong>
+              <p class="browse-meta">Search, liked songs, recent plays, albums, and artists stay here.</p>
+            </button>
+            <button class="shortcut-card section-jump-button" type="button" data-target-section="playlists">
+              <p class="summary-label">Playlists</p>
+              <strong>Manage sets</strong>
+              <p class="browse-meta">Create playlists, pick one, and inspect its track list without crowding the library.</p>
+            </button>
+            <button class="shortcut-card section-jump-button" type="button" data-target-section="settings">
+              <p class="summary-label">Settings</p>
+              <strong>Add music</strong>
+              <p class="browse-meta">Import files, check install status, and review the current local-file limitations.</p>
+            </button>
+          </div>
+        </section>
+
+        <section class="panel home-session-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">Session</p>
+              <h2>Current listening snapshot</h2>
+            </div>
+          </div>
+
+          <div class="session-card">
+            <strong id="home-current-track">Nothing playing</strong>
+            <p id="home-current-meta" class="track-player-meta">Import local files to start playback.</p>
+            <p id="home-session-note" class="hint">
+              Your queue, playlists, and browsing live in their own tabs now, so home can stay calm and lightweight.
+            </p>
+            <div class="home-session-actions">
+              <button class="button button-secondary section-jump-button" type="button" data-target-section="now-playing">
+                Open now playing
+              </button>
+              <button class="button button-secondary section-jump-button" type="button" data-target-section="library">
+                Open library
+              </button>
+            </div>
+          </div>
+        </section>
       </section>
 
       <section id="library-view" class="app-view" hidden>
@@ -118,7 +170,7 @@
           <div class="search-controls">
             <label class="search-field" for="library-search-input">
               <span class="summary-label">Search library</span>
-              <input id="library-search-input" type="search" placeholder="Search tracks, albums, artists, or playlists" />
+              <input id="library-search-input" type="search" placeholder="Search tracks, albums, or artists" />
             </label>
             <button id="clear-search-button" class="button button-secondary" type="button" hidden>
               Clear search
@@ -163,7 +215,30 @@
             </label>
           </div>
 
-          <div id="playlist-list" class="browse-grid" hidden></div>
+          <div class="playlist-layout">
+            <div id="playlist-list" class="browse-grid" hidden></div>
+
+            <section id="playlist-detail-panel" class="playlist-detail-panel">
+              <div class="panel-heading">
+                <div>
+                  <p class="section-label">Selected playlist</p>
+                  <h3 id="playlist-detail-title">Pick a playlist</h3>
+                </div>
+                <p id="playlist-detail-meta" class="hint">
+                  Create a playlist here, then add tracks from the library when you want to shape a listening set.
+                </p>
+              </div>
+
+              <div id="playlist-detail-empty-state" class="empty-state">
+                <h3>No playlist selected</h3>
+                <p>
+                  Choose a playlist card to inspect its full track list and keep playlist work separate from the library browser.
+                </p>
+              </div>
+
+              <div id="playlist-track-list" class="track-list" hidden></div>
+            </section>
+          </div>
         </section>
       </section>
 
@@ -244,32 +319,32 @@
 
       <section id="settings-view" class="app-view" hidden>
         <section class="panel app-status-panel">
-        <div class="panel-heading">
-          <div>
-            <p class="section-label">App shell</p>
-            <h2>Install and offline</h2>
-          </div>
-        </div>
-
-        <div class="app-status-grid">
-          <article class="summary-card shell-card">
-            <span class="summary-label">Connection</span>
-            <strong id="connection-status">Online</strong>
-            <p id="offline-note" class="hint">
-              The app shell can stay available offline, but actual audio playback still needs files imported in the current session.
-            </p>
-          </article>
-
-          <article class="summary-card shell-card">
-            <span class="summary-label">Install</span>
-            <strong id="install-status">Browser install not ready</strong>
-            <div class="install-actions">
-              <button id="install-app-button" class="button button-primary" type="button" hidden>
-                Install App
-              </button>
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">App shell</p>
+              <h2>Install and offline</h2>
             </div>
-          </article>
-        </div>
+          </div>
+
+          <div class="app-status-grid">
+            <article class="summary-card shell-card">
+              <span class="summary-label">Connection</span>
+              <strong id="connection-status">Online</strong>
+              <p id="offline-note" class="hint">
+                The app shell can stay available offline, but actual audio playback still needs files imported in the current session.
+              </p>
+            </article>
+
+            <article class="summary-card shell-card">
+              <span class="summary-label">Install</span>
+              <strong id="install-status">Browser install not ready</strong>
+              <div class="install-actions">
+                <button id="install-app-button" class="button button-primary" type="button" hidden>
+                  Install App
+                </button>
+              </div>
+            </article>
+          </div>
         </section>
 
         <section class="panel import-panel">
@@ -296,6 +371,32 @@
             <button id="clear-library" class="button button-secondary" type="button" hidden>
               Clear library
             </button>
+          </div>
+        </section>
+
+        <section class="panel settings-notes-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-label">Current reality</p>
+              <h2>What still needs work</h2>
+            </div>
+          </div>
+
+          <div class="settings-note-grid">
+            <article class="summary-card shell-card">
+              <span class="summary-label">Playback source</span>
+              <strong>Session-bound for now</strong>
+              <p class="hint">
+                Saved metadata survives reloads, but real playback still depends on re-importing the original files in the current browser session.
+              </p>
+            </article>
+            <article class="summary-card shell-card">
+              <span class="summary-label">Next roadmap gap</span>
+              <strong>Durable file access</strong>
+              <p class="hint">
+                The next major usability win is reopening the local library more directly after reload without pretending the current shell already solves that.
+              </p>
+            </article>
           </div>
         </section>
       </section>

@@ -118,11 +118,17 @@ Build local file import plus normalized track-library rendering, then make that 
 
 Build the next durable file-access slice: improve local-library reopening so persisted tracks are closer to playable after reload instead of living only as metadata.
 
+### Next Session Reference
+
+- The shell is now separated enough that the next session should avoid more navigation breadth and focus on durable file access for persisted libraries.
+- Keep any cleanup scoped to touched surfaces only, especially if `app.js` needs light extraction while file-access work is underway.
+
 ### Current UI Direction
 
 - Cozy lo-fi study-session atmosphere.
 - Muted earthy palette with warm beige, soft brown, dusty pink, sage green, and faded blue.
 - Minimal layout with generous breathing room, gentle motion, a sticky bottom player bar, and a tabbed app shell that separates home, library, playlists, now playing, and settings.
+- Keep section ownership strict enough that library browsing/search, playlist management, playback/queue, and settings/import tools do not collapse back into one overloaded page.
 - Functional playback-first UI with subtle texture, soft glass depth, hand-drawn iconography, and ambient den-like warmth rather than loud decoration.
 
 ## Working Priority Model

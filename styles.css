@@ -487,10 +487,21 @@ h3,
   margin-top: 1.25rem;
 }
 
+.home-shortcuts-grid,
+.settings-note-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
 .summary-card,
 .track-row,
 .queue-row,
 .browse-card,
+.shortcut-card,
+.session-card,
+.playlist-detail-panel,
 .now-playing-card,
 .player-controls {
   position: relative;
@@ -513,6 +524,53 @@ h3,
 
 .browse-card {
   padding: 1rem;
+}
+
+.browse-card[data-current='true'] {
+  border-color: rgba(195, 161, 160, 0.34);
+  background: linear-gradient(180deg, rgba(250, 236, 228, 0.82), rgba(245, 227, 217, 0.72));
+}
+
+.shortcut-card {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 1rem;
+  text-align: left;
+  color: var(--ink);
+  cursor: pointer;
+  transition: transform 320ms ease, background-color 320ms ease, border-color 320ms ease;
+}
+
+.shortcut-card:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 249, 243, 0.7);
+}
+
+.shortcut-card strong,
+.session-card strong {
+  font-family: "Lora", Georgia, serif;
+}
+
+.shortcut-card strong {
+  font-size: 1.18rem;
+}
+
+.session-card {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 1rem;
+  padding: 1.1rem;
+}
+
+.session-card strong {
+  font-size: 1.45rem;
+}
+
+.home-session-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .browse-card strong {
@@ -602,6 +660,18 @@ h3,
 .browse-grid {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.9rem;
+}
+
+.playlist-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.3fr);
+  gap: 1rem;
+  margin-top: 1rem;
+  align-items: start;
+}
+
+.playlist-detail-panel {
+  padding: 1.1rem;
 }
 
 .expanded-player-shell {
@@ -1055,6 +1125,12 @@ audio {
 
 @media (max-width: 900px) {
   .expanded-player-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .playlist-layout,
+  .home-shortcuts-grid,
+  .settings-note-grid {
     grid-template-columns: 1fr;
   }
 
