@@ -116,7 +116,7 @@ Build local file import plus normalized track-library rendering, then make that 
 
 ### Current Recommended Task
 
-Build the first search slice: fast library search across the normalized collection so tracks, albums, artists, playlists, and liked music are easier to reach in daily use.
+Build the next mobile-now-playing slice: tighten the expanded player and sticky bar behavior for narrow screens so playback remains comfortable during real daily use.
 
 ### Current UI Direction
 

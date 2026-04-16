@@ -265,6 +265,53 @@ test('stored library parsing hydrates playlists from current snapshots', async (
   assert.deepEqual(parsed.recentTrackIds, ['track-1']);
 });
 
+test('library search ranks title matches and playlist matches', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { searchLibrary } = await import(moduleUrl);
+
+  const tracks = [
+    {
+      id: 'track-1',
+      title: 'Feather',
+      artist: 'Nujabes',
+      album: 'Modal Soul',
+      filename: '01 - Feather.mp3',
+      relativePath: 'Modal Soul/01 - Feather.mp3',
+      duration: 204,
+      trackNumber: 1
+    },
+    {
+      id: 'track-2',
+      title: 'Luv(sic)',
+      artist: 'Nujabes',
+      album: 'Modal Soul',
+      filename: '02 - Luv(sic).mp3',
+      relativePath: 'Modal Soul/02 - Luv(sic).mp3',
+      duration: 210,
+      trackNumber: 2
+    }
+  ];
+
+  const results = searchLibrary(
+    tracks,
+    [
+      {
+        id: 'playlist:night:1',
+        name: 'Feather Focus',
+        trackIds: ['track-1']
+      }
+    ],
+    ['track-1'],
+    'feather'
+  );
+
+  assert.equal(results.tracks[0].id, 'track-1');
+  assert.equal(results.tracks[0].liked, true);
+  assert.equal(results.playlists[0].id, 'playlist:night:1');
+  assert.equal(results.albums[0].title, 'Modal Soul');
+  assert.equal(results.artists[0].name, 'Nujabes');
+});
+
 test('adjacent track lookup follows library order bounds', async () => {
   const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
   const { getAdjacentTrackId } = await import(moduleUrl);

@@ -459,7 +459,8 @@ function groupTracksByArtist(tracks) {
         albumCount: 0,
         trackCount: 0,
         totalDuration: 0,
-        albums: new Set()
+        albums: new Set(),
+        tracks: []
       });
     }
 
@@ -467,6 +468,7 @@ function groupTracksByArtist(tracks) {
     group.albums.add(track.album);
     group.trackCount += 1;
     group.totalDuration += Number.isFinite(track.duration) ? track.duration : 0;
+    group.tracks.push(track);
   });
 
   return [...artistMap.values()]
@@ -474,9 +476,149 @@ function groupTracksByArtist(tracks) {
       name: group.name,
       albumCount: group.albums.size,
       trackCount: group.trackCount,
-      totalDuration: group.totalDuration
+      totalDuration: group.totalDuration,
+      tracks: group.tracks
     }))
     .sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function searchTextScore(text, tokens, weight) {
+  const normalizedText = sanitizeText(text).toLowerCase();
+  if (!normalizedText) {
+    return 0;
+  }
+
+  return tokens.reduce((score, token) => {
+    if (!normalizedText.includes(token)) {
+      return score;
+    }
+
+    if (normalizedText === token) {
+      return score + weight + 4;
+    }
+
+    if (normalizedText.startsWith(token)) {
+      return score + weight + 2;
+    }
+
+    return score + weight;
+  }, 0);
+}
+
+function compareSearchResults(left, right, getLabel) {
+  if (right.score !== left.score) {
+    return right.score - left.score;
+  }
+
+  return getLabel(left).localeCompare(getLabel(right));
+}
+
+function searchLibrary(tracks, playlists, likedTrackIds, query) {
+  const tokens = sanitizeText(query)
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (tokens.length === 0) {
+    return {
+      query: '',
+      tracks: [],
+      albums: [],
+      artists: [],
+      playlists: []
+    };
+  }
+
+  const likedIdSet = new Set(likedTrackIds || []);
+
+  const trackResults = tracks
+    .map(track => {
+      const score =
+        searchTextScore(track.title, tokens, 10) +
+        searchTextScore(track.artist, tokens, 7) +
+        searchTextScore(track.album, tokens, 5) +
+        searchTextScore(track.filename, tokens, 3) +
+        searchTextScore(track.relativePath, tokens, 2) +
+        (likedIdSet.has(track.id) ? 1 : 0);
+
+      return score > 0
+        ? {
+            ...track,
+            score,
+            liked: likedIdSet.has(track.id)
+          }
+        : null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => compareSearchResults(left, right, result => result.title))
+    .slice(0, 8);
+
+  const albumResults = groupTracksByAlbum(tracks)
+    .map(album => {
+      const score =
+        searchTextScore(album.title, tokens, 9) +
+        searchTextScore(album.artist, tokens, 6) +
+        album.tracks.reduce((sum, track) => sum + searchTextScore(track.title, tokens, 2), 0);
+
+      return score > 0 ? { ...album, score } : null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => compareSearchResults(left, right, result => result.title))
+    .slice(0, 6);
+
+  const artistResults = groupTracksByArtist(tracks)
+    .map(artist => {
+      const score =
+        searchTextScore(artist.name, tokens, 10) +
+        artist.tracks.reduce(
+          (sum, track) =>
+            sum +
+            searchTextScore(track.album, tokens, 3) +
+            searchTextScore(track.title, tokens, 2),
+          0
+        );
+      return score > 0 ? { ...artist, score } : null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => compareSearchResults(left, right, result => result.name))
+    .slice(0, 6);
+
+  const trackById = new Map(tracks.map(track => [track.id, track]));
+  const playlistResults = playlists
+    .map(playlist => {
+      const playlistTracks = playlist.trackIds
+        .map(trackId => trackById.get(trackId))
+        .filter(Boolean);
+
+      const score =
+        searchTextScore(playlist.name, tokens, 10) +
+        playlistTracks.reduce(
+          (sum, track) =>
+            sum +
+            searchTextScore(track.title, tokens, 3) +
+            searchTextScore(track.artist, tokens, 2),
+          0
+        );
+
+      return score > 0
+        ? {
+            ...playlist,
+            score,
+            tracks: playlistTracks
+          }
+        : null;
+    })
+    .filter(Boolean)
+    .sort((left, right) => compareSearchResults(left, right, result => result.name))
+    .slice(0, 6);
+
+  return {
+    query: tokens.join(' '),
+    tracks: trackResults,
+    albums: albumResults,
+    artists: artistResults,
+    playlists: playlistResults
+  };
 }
 
 function createLibrarySnapshot(
@@ -614,6 +756,7 @@ export {
   parseFilenameMetadata,
   parseId3v2Metadata,
   parseStoredLibrary,
+  searchLibrary,
   sortTracks,
   summarizeLibrary
 };

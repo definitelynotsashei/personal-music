@@ -4,7 +4,7 @@ _Last updated 2026-04-16. For context-sharing, not a coding reference._
 ---
 
 ## In Progress
-Starting the next usability slice: library search on top of the normalized library, personal layer, and current playback model.
+Starting the next mobile-now-playing slice: tightening the sticky player and expanded playback view for narrow-screen daily use.
 
 ---
 
@@ -21,6 +21,7 @@ A local-first personal music player intended for your own library, with a focus 
 - Queue behavior works with explicit queue order instead of only the library sort order.
 - Library browsing works across tracks, albums, and artists instead of a single flat list.
 - The personal layer now includes persistent liked songs, playlists, and recently played history.
+- The first search slice now supports ranked library search across tracks, albums, artists, playlists, and liked music.
 - The current UI direction is a cozy late-night listening-den aesthetic with muted earthy tones, soft glass panels, hand-drawn iconography, a sticky bottom player bar, and calm motion.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
@@ -51,7 +52,7 @@ A local-first personal music player intended for your own library, with a focus 
 5. Personal layer.
 
 ### Current recommended next task
-- Build the first search slice so the normalized library is easier to navigate in daily use.
+- Tighten the mobile-now-playing slice so the sticky player and expanded view feel better on narrow screens.
 
 ---
 
@@ -113,8 +114,7 @@ const libraryState = {
 - Audio file handles and richer persistent access are still to be designed beyond the initial imported library index.
 - Persisted library metadata survives reloads, but playback sources currently require session-local imports until durable file access is added.
 - Queue state is currently session-local and will not survive reloads until player-state persistence is added deliberately.
-- Library browsing is still shallow; search and deeper navigation are separate follow-up work.
-- The personal layer now includes liked songs, playlists, and recently played, but search is still missing for larger libraries.
+- Search is now present, but mobile-now-playing polish is still needed for stronger narrow-screen daily use.
 
 ---
 

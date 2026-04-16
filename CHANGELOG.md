@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - Search Slice
+
+### Features
+- Added the first ranked library-search slice with a shared search field and cross-library results for tracks, albums, artists, playlists, and liked music.
+
+### Documentation
+- Advanced the roadmap and project state from search into the next mobile-now-playing slice.
+
+### Tests
+- Expanded regression coverage for search ranking and cross-library search results.
+
 ## 2026-04-16 - Listening Den UI Pass
 
 ### Features

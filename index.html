@@ -113,6 +113,16 @@
           </button>
         </div>
 
+        <div class="search-controls">
+          <label class="search-field" for="library-search-input">
+            <span class="summary-label">Search library</span>
+            <input id="library-search-input" type="search" placeholder="Search tracks, albums, artists, or playlists" />
+          </label>
+          <button id="clear-search-button" class="button button-secondary" type="button" hidden>
+            Clear search
+          </button>
+        </div>
+
         <div id="playlist-controls" class="playlist-controls" hidden>
           <label class="playlist-field">
             <span class="summary-label">Create playlist</span>
@@ -136,6 +146,7 @@
         </div>
 
         <div id="track-list" class="track-list" hidden></div>
+        <div id="search-results" class="search-results" hidden></div>
         <div id="playlist-list" class="browse-grid" hidden></div>
         <div id="album-list" class="browse-grid" hidden></div>
         <div id="artist-list" class="browse-grid" hidden></div>

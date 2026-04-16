@@ -17,6 +17,7 @@ import {
   normalizePlaylists,
   normalizeRecentTrackIds,
   parseStoredLibrary,
+  searchLibrary,
   sortTracks,
   summarizeLibrary
 } from './src/library.js';
@@ -34,6 +35,9 @@ const playlistList = document.querySelector('#playlist-list');
 const albumList = document.querySelector('#album-list');
 const artistList = document.querySelector('#artist-list');
 const browseTabs = document.querySelectorAll('.browse-tab');
+const searchInput = document.querySelector('#library-search-input');
+const clearSearchButton = document.querySelector('#clear-search-button');
+const searchResults = document.querySelector('#search-results');
 const playlistControls = document.querySelector('#playlist-controls');
 const playlistNameInput = document.querySelector('#playlist-name-input');
 const createPlaylistButton = document.querySelector('#create-playlist-button');
@@ -95,6 +99,7 @@ const state = {
   importInFlight: false,
   lastSavedAt: null,
   browseView: 'tracks',
+  searchQuery: '',
   player: {
     currentTrackId: null,
     paused: true,
@@ -203,6 +208,15 @@ function getRecentTracks() {
     .filter(Boolean);
 }
 
+function getSearchResults() {
+  return searchLibrary(
+    state.tracks,
+    state.playlists,
+    state.likedTrackIds,
+    state.searchQuery
+  );
+}
+
 function ensureSelectedPlaylist() {
   if (!state.selectedPlaylistId || !getPlaylistById(state.selectedPlaylistId)) {
     state.selectedPlaylistId = state.playlists[0]?.id ?? null;
@@ -264,7 +278,9 @@ function updateBrowseTabs() {
 
 function updatePlaylistControls() {
   ensureSelectedPlaylist();
-  const showControls = state.browseView === 'playlists' || state.tracks.length > 0;
+  const showControls =
+    !state.searchQuery.trim() &&
+    (state.browseView === 'playlists' || state.tracks.length > 0);
   playlistControls.hidden = !showControls;
 
   playlistSelect.innerHTML = '';
@@ -287,6 +303,11 @@ function updatePlaylistControls() {
     }
     playlistSelect.append(option);
   });
+}
+
+function updateSearchControls() {
+  const hasQuery = Boolean(state.searchQuery.trim());
+  clearSearchButton.hidden = !hasQuery;
 }
 
 function updateLikeButton() {
@@ -590,10 +611,167 @@ function renderRecentView() {
   renderTracksView(recentTracks);
 }
 
+function renderSearchResults() {
+  const results = getSearchResults();
+  const hasQuery = Boolean(results.query);
+  searchResults.innerHTML = '';
+  searchResults.hidden = !hasQuery;
+
+  if (!hasQuery) {
+    return;
+  }
+
+  const totalMatches =
+    results.tracks.length +
+    results.albums.length +
+    results.artists.length +
+    results.playlists.length;
+
+  if (totalMatches === 0) {
+    searchResults.innerHTML = `
+      <div class="empty-state">
+        <h3>No matches yet</h3>
+        <p>Try a track title, artist, album, or playlist name from your local library.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const sections = [];
+
+  if (results.tracks.length > 0) {
+    sections.push(`
+      <section class="search-section">
+        <div class="search-section-header">
+          <p class="summary-label">Tracks</p>
+          <strong>${results.tracks.length} match${results.tracks.length === 1 ? '' : 'es'}</strong>
+        </div>
+        <div class="track-list">
+          ${results.tracks
+            .map(track => {
+              const isCurrent = track.id === state.player.currentTrackId;
+              const actionLabel = isCurrent && !state.player.paused ? 'Pause' : 'Play';
+              return `
+                <article class="track-row" ${isCurrent ? 'data-current="true"' : ''}>
+                  <div class="track-index">${track.trackNumber ?? '-'}</div>
+                  <div class="track-main">
+                    <strong>${track.title}</strong>
+                    <p>${track.artist} | ${track.album}</p>
+                  </div>
+                  <div class="track-actions">
+                    <button class="track-play-button icon-button icon-button-secondary" type="button" data-track-id="${track.id}" aria-label="${actionLabel}" title="${actionLabel}" ${canPlayTrack(track) ? '' : 'disabled'}>
+                      ${getIconMarkup(isCurrent && !state.player.paused ? 'pause' : 'play')}
+                      <span class="sr-only">${actionLabel}</span>
+                    </button>
+                    <button class="track-like-button icon-button icon-button-secondary" type="button" data-track-id="${track.id}" data-active="${track.liked}" aria-label="${track.liked ? 'Unlike track' : 'Like track'}" title="${track.liked ? 'Unlike track' : 'Like track'}">
+                      ${getIconMarkup('heart')}
+                      <span class="sr-only">${track.liked ? 'Unlike track' : 'Like track'}</span>
+                    </button>
+                  </div>
+                  <div class="track-meta">
+                    <span>${track.liked ? 'Liked' : 'Track'}</span>
+                    <span>${formatDuration(track.duration)}</span>
+                  </div>
+                </article>
+              `;
+            })
+            .join('')}
+        </div>
+      </section>
+    `);
+  }
+
+  if (results.playlists.length > 0) {
+    sections.push(`
+      <section class="search-section">
+        <div class="search-section-header">
+          <p class="summary-label">Playlists</p>
+          <strong>${results.playlists.length} match${results.playlists.length === 1 ? '' : 'es'}</strong>
+        </div>
+        <div class="browse-grid">
+          ${results.playlists
+            .map(playlist => `
+              <article class="browse-card">
+                <p class="summary-label">Playlist</p>
+                <strong>${playlist.name}</strong>
+                <p class="browse-meta">${playlist.trackIds.length} track${playlist.trackIds.length === 1 ? '' : 's'}</p>
+                <button class="button button-secondary playlist-select-button" type="button" data-playlist-id="${playlist.id}">
+                  ${playlist.id === state.selectedPlaylistId ? 'Selected Playlist' : 'Select Playlist'}
+                </button>
+                <div class="browse-chip-list">
+                  ${playlist.tracks
+                    .slice(0, 4)
+                    .map(track => `<button class="browse-chip" type="button" data-track-id="${track.id}">${track.title}</button>`)
+                    .join('')}
+                </div>
+              </article>
+            `)
+            .join('')}
+        </div>
+      </section>
+    `);
+  }
+
+  if (results.albums.length > 0) {
+    sections.push(`
+      <section class="search-section">
+        <div class="search-section-header">
+          <p class="summary-label">Albums</p>
+          <strong>${results.albums.length} match${results.albums.length === 1 ? '' : 'es'}</strong>
+        </div>
+        <div class="browse-grid">
+          ${results.albums
+            .map(album => `
+              <article class="browse-card">
+                <p class="summary-label">Album</p>
+                <strong>${album.title}</strong>
+                <p class="browse-meta">${album.artist}</p>
+                <p class="browse-meta">${album.trackCount} track${album.trackCount === 1 ? '' : 's'} | ${formatDuration(album.totalDuration)}</p>
+                <div class="browse-chip-list">
+                  ${album.tracks
+                    .slice(0, 4)
+                    .map(track => `<button class="browse-chip" type="button" data-track-id="${track.id}">${track.trackNumber ?? '-'} ${track.title}</button>`)
+                    .join('')}
+                </div>
+              </article>
+            `)
+            .join('')}
+        </div>
+      </section>
+    `);
+  }
+
+  if (results.artists.length > 0) {
+    sections.push(`
+      <section class="search-section">
+        <div class="search-section-header">
+          <p class="summary-label">Artists</p>
+          <strong>${results.artists.length} match${results.artists.length === 1 ? '' : 'es'}</strong>
+        </div>
+        <div class="browse-grid">
+          ${results.artists
+            .map(artist => `
+              <article class="browse-card">
+                <p class="summary-label">Artist</p>
+                <strong>${artist.name}</strong>
+                <p class="browse-meta">${artist.albumCount} album${artist.albumCount === 1 ? '' : 's'} | ${artist.trackCount} track${artist.trackCount === 1 ? '' : 's'}</p>
+                <p class="browse-meta">${formatDuration(artist.totalDuration)}</p>
+              </article>
+            `)
+            .join('')}
+        </div>
+      </section>
+    `);
+  }
+
+  searchResults.innerHTML = sections.join('');
+}
+
 function renderLibraryBrowser() {
   clearLibraryButton.hidden = state.tracks.length === 0 && state.playlists.length === 0;
   updateBrowseTabs();
   updatePlaylistControls();
+  updateSearchControls();
 
   if (state.tracks.length === 0 && state.playlists.length === 0) {
     emptyState.hidden = false;
@@ -601,6 +779,7 @@ function renderLibraryBrowser() {
     playlistList.hidden = true;
     albumList.hidden = true;
     artistList.hidden = true;
+    searchResults.hidden = true;
     updateSummary();
     updateNowPlaying();
     renderQueue();
@@ -608,10 +787,25 @@ function renderLibraryBrowser() {
   }
 
   emptyState.hidden = state.tracks.length > 0 || state.playlists.length > 0;
+  const searchActive = Boolean(state.searchQuery.trim());
   trackList.hidden = !['tracks', 'liked', 'recent'].includes(state.browseView);
   playlistList.hidden = state.browseView !== 'playlists';
   albumList.hidden = state.browseView !== 'albums';
   artistList.hidden = state.browseView !== 'artists';
+
+  if (searchActive) {
+    trackList.hidden = true;
+    playlistList.hidden = true;
+    albumList.hidden = true;
+    artistList.hidden = true;
+    renderSearchResults();
+    updateSummary();
+    updateNowPlaying();
+    renderQueue();
+    return;
+  }
+
+  searchResults.hidden = true;
 
   if (state.browseView === 'tracks') {
     renderTracksView();
@@ -969,6 +1163,11 @@ function setBrowseView(view) {
   renderLibraryBrowser();
 }
 
+function setSearchQuery(query) {
+  state.searchQuery = String(query || '');
+  renderLibraryBrowser();
+}
+
 async function handleImport(fileList) {
   if (!fileList || fileList.length === 0 || state.importInFlight) {
     return;
@@ -1141,8 +1340,18 @@ trackList?.addEventListener('click', handleTrackListClick);
 playlistList?.addEventListener('click', handleTrackListClick);
 albumList?.addEventListener('click', handleTrackListClick);
 artistList?.addEventListener('click', handleTrackListClick);
+searchResults?.addEventListener('click', handleTrackListClick);
 browseTabs.forEach(tab => {
   tab.addEventListener('click', () => setBrowseView(tab.dataset.view));
+});
+searchInput?.addEventListener('input', event => {
+  setSearchQuery(event.target.value);
+});
+clearSearchButton?.addEventListener('click', () => {
+  if (searchInput) {
+    searchInput.value = '';
+  }
+  setSearchQuery('');
 });
 createPlaylistButton?.addEventListener('click', () => createPlaylist(playlistNameInput.value));
 playlistSelect?.addEventListener('change', event => {
