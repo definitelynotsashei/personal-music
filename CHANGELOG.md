@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-04-16 - Stronger V1 Plan And Persistent Library Model
+
+### Features
+- Persisted the normalized imported library model locally so the first library-foundation milestone survives reloads.
+- Added a local library reset path for replacing or clearing the imported index during early development.
+
+### Documentation
+- Added the first concrete stronger-v1 milestone plan, implementation milestone sequence, and current recommended next task.
+
+### Tests
+- Expanded regression coverage for local library storage serialization and hydration helpers.
+
 ## 2026-04-15 - Product Direction And Library Import Baseline
 
 ### Features

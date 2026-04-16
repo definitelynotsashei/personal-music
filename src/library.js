@@ -9,6 +9,8 @@ const SUPPORTED_AUDIO_EXTENSIONS = new Set([
   'opus'
 ]);
 
+const LIBRARY_STORAGE_KEY = 'personal-music-player.library.v1';
+
 function getFileExtension(filename = '') {
   const normalized = String(filename).toLowerCase();
   const lastDot = normalized.lastIndexOf('.');
@@ -294,14 +296,96 @@ function formatDuration(seconds) {
   return `${minutes}:${remainingSeconds}`;
 }
 
+function createLibrarySnapshot(tracks) {
+  const sortedTracks = sortTracks(tracks);
+  const importSummary = summarizeLibrary(sortedTracks);
+
+  return {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    importSummary,
+    tracks: sortedTracks.map(track => ({
+      id: sanitizeText(track.id),
+      title: sanitizeText(track.title) || 'Unknown Track',
+      artist: sanitizeText(track.artist) || 'Unknown Artist',
+      album: sanitizeText(track.album) || 'Unknown Album',
+      trackNumber: Number.isFinite(track.trackNumber) ? track.trackNumber : null,
+      year: sanitizeText(track.year) || null,
+      genre: sanitizeText(track.genre) || null,
+      src: sanitizeText(track.src),
+      duration: Number.isFinite(track.duration) ? track.duration : null,
+      filename: sanitizeText(track.filename),
+      relativePath: sanitizeText(track.relativePath),
+      size: Number.isFinite(track.size) ? track.size : 0,
+      lastModified: Number.isFinite(track.lastModified) ? track.lastModified : 0
+    }))
+  };
+}
+
+function parseStoredLibrary(rawValue) {
+  if (!rawValue) {
+    return {
+      tracks: [],
+      importSummary: summarizeLibrary([]),
+      savedAt: null
+    };
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(rawValue);
+  } catch {
+    return {
+      tracks: [],
+      importSummary: summarizeLibrary([]),
+      savedAt: null
+    };
+  }
+
+  if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.tracks)) {
+    return {
+      tracks: [],
+      importSummary: summarizeLibrary([]),
+      savedAt: null
+    };
+  }
+
+  const tracks = sortTracks(
+    parsed.tracks.map(track => ({
+      id: sanitizeText(track.id),
+      title: sanitizeText(track.title) || 'Unknown Track',
+      artist: sanitizeText(track.artist) || 'Unknown Artist',
+      album: sanitizeText(track.album) || 'Unknown Album',
+      trackNumber: Number.isFinite(track.trackNumber) ? track.trackNumber : null,
+      year: sanitizeText(track.year) || null,
+      genre: sanitizeText(track.genre) || null,
+      src: sanitizeText(track.src),
+      duration: Number.isFinite(track.duration) ? track.duration : null,
+      filename: sanitizeText(track.filename),
+      relativePath: sanitizeText(track.relativePath),
+      size: Number.isFinite(track.size) ? track.size : 0,
+      lastModified: Number.isFinite(track.lastModified) ? track.lastModified : 0
+    }))
+  );
+
+  return {
+    tracks,
+    importSummary: summarizeLibrary(tracks),
+    savedAt: sanitizeText(parsed.savedAt) || null
+  };
+}
+
 export {
   buildTrackFromFile,
+  createLibrarySnapshot,
   createTrackId,
   formatDuration,
   isSupportedAudioFile,
+  LIBRARY_STORAGE_KEY,
   normalizeImportedTrack,
   parseFilenameMetadata,
   parseId3v2Metadata,
+  parseStoredLibrary,
   sortTracks,
   summarizeLibrary
 };

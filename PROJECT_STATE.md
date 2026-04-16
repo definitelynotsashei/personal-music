@@ -1,10 +1,10 @@
 # Music Player - Project State Summary
-_Last updated 2026-04-15. For context-sharing, not a coding reference._
+_Last updated 2026-04-16. For context-sharing, not a coding reference._
 
 ---
 
 ## In Progress
-Building the first real product feature: desktop-first local audio import with normalized metadata extraction and a usable library track list.
+Completing the first stronger-v1 milestone step: durable desktop-first local audio import with normalized metadata extraction, persistent local library storage, and a usable track list.
 
 ---
 
@@ -15,7 +15,9 @@ A local-first personal music player intended for your own library, with a focus 
 ### Runtime snapshot
 - Runtime starts with a simple `index.html` + `app.js` + `styles.css` structure.
 - A minimal `service-worker.js` exists for future offline and cache work.
-- Tests cover project-baseline file presence and core library-normalization helpers.
+- The app can import local audio files in-browser and render a normalized track list.
+- Library data is persisted locally in browser storage so reloads keep the current imported library model.
+- Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
 ### Current product snapshot
 - Product goal: a local-first personal music player for your own library, with clean playback, playlists, search, and a strong mobile-friendly now-playing experience.
@@ -35,6 +37,16 @@ A local-first personal music player intended for your own library, with a focus 
 - Start playback immediately and use dependable queue controls on both desktop and mobile browsers.
 - Use playlists, liked songs, and recently played without any account or cloud dependency.
 - Use a mobile-friendly now-playing view that still feels intentional on desktop.
+
+### Current milestone sequence
+1. Library foundation.
+2. Playback foundation.
+3. Queue foundation.
+4. Library browsing.
+5. Personal layer.
+
+### Current recommended next task
+- Finish the library foundation by persisting the imported normalized library model locally and making reload behavior reliable.
 
 ---
 
@@ -76,10 +88,11 @@ const playerState = {
 
 const libraryState = {
   tracks,
+  importSummary,
+  lastImportedAt,
   playlists,
   likedTrackIds,
-  recentTrackIds,
-  importSummary
+  recentTrackIds
 };
 ```
 
@@ -92,7 +105,7 @@ const libraryState = {
 - Metadata import quality may vary.
 - Embedded metadata is primary, but fallback parsing is still required for incomplete files.
 - Full metadata editing is out of scope for the initial v1.
-- Final file and storage approach is still to be decided.
+- Audio file handles and richer persistent access are still to be designed beyond the initial imported library index.
 
 ---
 

@@ -45,16 +45,13 @@ This project reaches its first major finish line when:
 
 Ship a web-first personal music player where you can import your own local music files on desktop, browse a normalized library, start playback immediately, manage a queue and basic playlists, search your collection, and use a mobile-friendly now-playing screen without needing any cloud account or streaming service.
 
-## Working Priority Model
+## First Stronger V1 Plan
 
-Use this order when continuing from the roadmap:
+### Short Milestone Definition
 
-1. Build the highest-value user-facing feature.
-2. Only do architecture cleanup when it supports the touched area.
-3. Update tests, docs, and cache metadata in the same pass.
-4. Prefer small complete batches over broad unfinished work.
+Deliver a durable local library foundation: import desktop music files into a persistent normalized library model, render a usable track list, and keep the app positioned for playback and queue work on mobile and desktop browsers.
 
-## Current Product Priority Order
+### Current Product Priority Order
 
 1. **Library foundation**
    - Import local audio files and folders from a user-managed library.
@@ -67,24 +64,56 @@ Use this order when continuing from the roadmap:
    - Next/previous.
    - Seek.
    - Volume.
-   - Queue progression.
+   - Current track state.
 
-3. **Library navigation**
-   - Browse by tracks.
-   - Browse by albums.
-   - Browse by artists.
-   - Make the core layout work cleanly across desktop and mobile.
+3. **Queue foundation**
+   - Queue management.
+   - Queue ordering and current queue index.
+   - Basic repeat and shuffle decisions.
 
-4. **Personal-use layer**
+4. **Library browsing**
+   - Tracks.
+   - Albums.
+   - Artists.
+   - Mobile and desktop layout fit for daily use.
+
+5. **Personal layer**
    - Liked songs.
    - Playlists.
    - Recently played.
 
-  5. **Usability polish**
-   - Search.
-   - Keyboard shortcuts.
-   - Mobile-friendly now-playing.
-   - Basic PWA/offline polish if useful.
+### Implementation Milestones In Sequence
+
+1. **Library foundation**
+   - Import local files.
+   - Normalize track metadata.
+   - Store a usable library model.
+
+2. **Playback foundation**
+   - Introduce a real audio element and player state.
+   - Support play/pause, next/previous, seek, and volume.
+
+3. **Queue foundation**
+   - Build queue state, queue order, queue index, and repeat/shuffle behavior.
+
+4. **Library browsing**
+   - Add tracks, albums, and artists views on top of the normalized library.
+
+5. **Personal layer**
+   - Add liked songs, playlists, and recently played on top of the core library and playback model.
+
+### Very First Implementation Task
+
+Build local file import plus normalized track-library rendering, then make that library model persist locally so later playback, queue, and browsing work builds on a stable base.
+
+## Working Priority Model
+
+Use this order when continuing from the roadmap:
+
+1. Build the highest-value user-facing feature.
+2. Only do architecture cleanup when it supports the touched area.
+3. Update tests, docs, and cache metadata in the same pass.
+4. Prefer small complete batches over broad unfinished work.
 
 ## Deferred By Choice
 

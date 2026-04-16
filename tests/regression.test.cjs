@@ -108,3 +108,64 @@ test('normalized tracks prefer embedded metadata over filename fallback', async 
   assert.equal(track.trackNumber, 3);
   assert.equal(track.relativePath, 'Albums/Example/01 - Wrong Artist - Wrong Title.mp3');
 });
+
+test('library snapshots store normalized tracks and summary metadata', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { createLibrarySnapshot } = await import(moduleUrl);
+
+  const snapshot = createLibrarySnapshot([
+    {
+      id: 'track-1',
+      title: 'Feather',
+      artist: 'Nujabes',
+      album: 'Modal Soul',
+      trackNumber: 1,
+      year: '2005',
+      genre: 'Hip-Hop',
+      src: '',
+      duration: 204,
+      filename: '01 - Feather.mp3',
+      relativePath: 'Modal Soul/01 - Feather.mp3',
+      size: 123,
+      lastModified: 456
+    }
+  ]);
+
+  assert.equal(snapshot.version, 1);
+  assert.equal(snapshot.importSummary.trackCount, 1);
+  assert.equal(snapshot.importSummary.artistCount, 1);
+  assert.equal(snapshot.tracks[0].title, 'Feather');
+  assert.equal(typeof snapshot.savedAt, 'string');
+});
+
+test('stored library parsing hydrates valid snapshots and rejects invalid ones', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { parseStoredLibrary } = await import(moduleUrl);
+
+  const valid = parseStoredLibrary(JSON.stringify({
+    version: 1,
+    savedAt: '2026-04-16T00:00:00.000Z',
+    tracks: [
+      {
+        id: 'track-1',
+        title: 'Feather',
+        artist: 'Nujabes',
+        album: 'Modal Soul',
+        trackNumber: 1,
+        duration: 204,
+        filename: '01 - Feather.mp3',
+        relativePath: 'Modal Soul/01 - Feather.mp3',
+        size: 123,
+        lastModified: 456
+      }
+    ]
+  }));
+
+  assert.equal(valid.tracks.length, 1);
+  assert.equal(valid.importSummary.trackCount, 1);
+  assert.equal(valid.savedAt, '2026-04-16T00:00:00.000Z');
+
+  const invalid = parseStoredLibrary('{not valid json');
+  assert.equal(invalid.tracks.length, 0);
+  assert.equal(invalid.importSummary.trackCount, 0);
+});

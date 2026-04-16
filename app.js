@@ -1,7 +1,10 @@
 import {
   buildTrackFromFile,
+  createLibrarySnapshot,
   formatDuration,
   isSupportedAudioFile,
+  LIBRARY_STORAGE_KEY,
+  parseStoredLibrary,
   sortTracks,
   summarizeLibrary
 } from './src/library.js';
@@ -15,10 +18,53 @@ const artistCount = document.querySelector('#artist-count');
 const albumCount = document.querySelector('#album-count');
 const emptyState = document.querySelector('#empty-state');
 const trackList = document.querySelector('#track-list');
+const clearLibraryButton = document.querySelector('#clear-library');
 const state = {
   tracks: [],
-  importInFlight: false
+  importInFlight: false,
+  lastSavedAt: null
 };
+
+function canUseLocalStorage() {
+  try {
+    return typeof window.localStorage !== 'undefined';
+  } catch {
+    return false;
+  }
+}
+
+function saveLibrary() {
+  if (!canUseLocalStorage()) {
+    return false;
+  }
+
+  const snapshot = createLibrarySnapshot(state.tracks);
+  state.lastSavedAt = snapshot.savedAt;
+  window.localStorage.setItem(LIBRARY_STORAGE_KEY, JSON.stringify(snapshot));
+  return true;
+}
+
+function loadStoredLibrary() {
+  if (!canUseLocalStorage()) {
+    return false;
+  }
+
+  const storedLibrary = parseStoredLibrary(
+    window.localStorage.getItem(LIBRARY_STORAGE_KEY)
+  );
+  state.tracks = storedLibrary.tracks;
+  state.lastSavedAt = storedLibrary.savedAt;
+  return storedLibrary.tracks.length > 0;
+}
+
+function clearStoredLibrary() {
+  state.tracks = [];
+  state.lastSavedAt = null;
+
+  if (canUseLocalStorage()) {
+    window.localStorage.removeItem(LIBRARY_STORAGE_KEY);
+  }
+}
 
 function setStatus(message, tone = 'normal') {
   importStatus.textContent = message;
@@ -34,6 +80,7 @@ function updateSummary() {
 
 function renderTrackList() {
   trackList.innerHTML = '';
+  clearLibraryButton.hidden = state.tracks.length === 0;
 
   if (state.tracks.length === 0) {
     emptyState.hidden = false;
@@ -51,10 +98,10 @@ function renderTrackList() {
     const article = document.createElement('article');
     article.className = 'track-row';
     article.innerHTML = `
-      <div class="track-index">${track.trackNumber ?? '•'}</div>
+      <div class="track-index">${track.trackNumber ?? '-'}</div>
       <div class="track-main">
         <strong>${track.title}</strong>
-        <p>${track.artist} • ${track.album}</p>
+        <p>${track.artist} | ${track.album}</p>
       </div>
       <div class="track-meta">
         <span>${formatDuration(track.duration)}</span>
@@ -133,24 +180,36 @@ async function handleImport(fileList) {
   }
 
   state.importInFlight = true;
-  setStatus(`Importing ${supportedFiles.length} audio file${supportedFiles.length === 1 ? '' : 's'}...`);
+  setStatus(
+    `Importing ${supportedFiles.length} audio file${supportedFiles.length === 1 ? '' : 's'}...`
+  );
 
   try {
     const tracks = await normalizeFiles(supportedFiles);
     mergeTracks(tracks);
+    const saved = saveLibrary();
     renderTrackList();
     setStatus(
-      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view. Embedded metadata was used when available, with filename fallback for missing fields.`,
+      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library was saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Embedded metadata was used when available, with filename fallback for missing fields.`,
       'success'
     );
   } catch (error) {
     console.error(error);
-    setStatus('Import failed while reading local files. Try a smaller selection or a different folder.', 'error');
+    setStatus(
+      'Import failed while reading local files. Try a smaller selection or a different folder.',
+      'error'
+    );
   } finally {
     state.importInFlight = false;
     fileInput.value = '';
     folderInput.value = '';
   }
+}
+
+function handleClearLibrary() {
+  clearStoredLibrary();
+  renderTrackList();
+  setStatus('Cleared the locally stored library index for this browser.', 'warning');
 }
 
 async function registerServiceWorker() {
@@ -167,5 +226,11 @@ async function registerServiceWorker() {
 
 fileInput?.addEventListener('change', event => handleImport(event.target.files));
 folderInput?.addEventListener('change', event => handleImport(event.target.files));
+clearLibraryButton?.addEventListener('click', handleClearLibrary);
+
+if (loadStoredLibrary()) {
+  setStatus('Loaded the locally saved library index for this browser.', 'success');
+}
+
 renderTrackList();
 registerServiceWorker();
