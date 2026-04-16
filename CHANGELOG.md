@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-04-16 - Tab Surface Cleanup Slice
+
+### Features
+- Split compact-screen Now Playing tab behavior away from the desktop section path so mobile opens the overlay room without colliding with the tabbed section view.
+- Moved the shared status surface out of Home so import and playback messages remain visible across every top-level tab.
+- Stopped broad library rerenders from firing on unrelated tabs and kept playlist creation visible even before tracks are imported.
+
+### Documentation
+- Documented the tighter cross-surface shell rules around status visibility, mobile now-playing routing, and lighter library rerender behavior.
+
+### Tests
+- Expanded regression coverage for global status placement, compact now-playing routing, playlist-control visibility, and library-render guards.
+
 ## 2026-04-16 - Tab Navigation Reliability Slice
 
 ### Features

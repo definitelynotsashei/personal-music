@@ -63,12 +63,39 @@ test('settings includes a reconnect library folder control', () => {
   assert.match(html, /id="reconnect-library-folder"/);
 });
 
+test('import status lives outside the home tab shell', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+  assert.match(html, /<\/main>\s*<p id="import-status" class="status shell-status"/);
+});
+
 test('app shell syncs sections with the URL hash', () => {
   const script = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
 
   assert.match(script, /window\.addEventListener\('hashchange'/);
   assert.match(script, /window\.history\.replaceState/);
   assert.match(script, /window\.location\.hash\.slice\(1\)/);
+});
+
+test('now playing uses an overlay path on compact screens', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+
+  assert.match(script, /normalizedSection === 'now-playing' && state\.compactPlayerMode/);
+  assert.match(script, /state\.appSection = normalizeAppSection\(state\.lastNonPlayerSection \|\| 'home'\)/);
+  assert.match(script, /function openExpandedPlayer\(\) {\s*setAppSection\('now-playing'\);/s);
+});
+
+test('playlist controls remain available without imported tracks', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+
+  assert.match(script, /const showControls = state\.appSection === 'playlists';/);
+});
+
+test('library rendering is guarded to library and playlists tabs', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+
+  assert.match(script, /if \(state\.appSection === 'playlists'\) {\s*renderPlaylistsView\(\);\s*return;\s*}/s);
+  assert.match(script, /if \(state\.appSection !== 'library'\) {\s*return;\s*}/s);
 });
 
 test('service worker prefers fresh shell assets and activates immediately', () => {

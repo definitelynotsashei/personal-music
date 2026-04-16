@@ -4,7 +4,7 @@ _Last updated 2026-04-16. For context-sharing, not a coding reference._
 ---
 
 ## In Progress
-Following through on app-shell reliability so the split-tab navigation actually loads and behaves like distinct surfaces instead of falling back to a stale one-page shell.
+Tightening split-tab behavior so now-playing routing, status visibility, library renders, and playlist creation each stay in the right surface.
 
 ---
 
@@ -28,6 +28,8 @@ A local-first personal music player intended for your own library, with a focus 
 - Section ownership is stricter now: Home is a lighter dashboard, Library owns browsing and search, Playlists owns playlist selection and detail, Now Playing owns the full player and queue, and Settings owns import/install/offline context plus current limitations.
 - The app shell now syncs top-level tabs with the URL hash and scroll reset so section changes behave more like real navigation.
 - The service worker now prefers fresh shell assets and activates immediately so cached installs are less likely to stay stuck on an older one-page build.
+- The import status surface now lives outside Home so file, playback, and install messages stay visible across every top-level tab.
+- On compact screens, Now Playing opens through the player overlay path while desktop keeps it as a normal tabbed section.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
 ### Current product snapshot

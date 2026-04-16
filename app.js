@@ -202,17 +202,7 @@ function updatePlayerShellMode() {
 }
 
 function openExpandedPlayer() {
-  if (state.appSection !== 'now-playing') {
-    state.lastNonPlayerSection = state.appSection;
-    state.appSection = 'now-playing';
-  }
-
-  if (state.compactPlayerMode) {
-    state.mobilePlayerOpen = true;
-  }
-
-  updateAppSections({ updateLocation: true });
-  updatePlayerShellMode();
+  setAppSection('now-playing');
 }
 
 function closeExpandedPlayer() {
@@ -246,7 +236,11 @@ function updateAppSections(options = {}) {
   const { updateLocation = false } = options;
 
   appTabs.forEach(tab => {
-    const isActive = tab.dataset.section === state.appSection;
+    const isOverlayTab =
+      state.compactPlayerMode &&
+      state.mobilePlayerOpen &&
+      tab.dataset.section === 'now-playing';
+    const isActive = isOverlayTab || tab.dataset.section === state.appSection;
     tab.dataset.active = String(isActive);
     tab.setAttribute('aria-pressed', String(isActive));
   });
@@ -263,11 +257,24 @@ function updateAppSections(options = {}) {
 function setAppSection(section, options = {}) {
   const { updateLocation = true, scrollToTop = true } = options;
   const normalizedSection = normalizeAppSection(section);
-  state.appSection = normalizedSection;
+
   if (normalizedSection === 'now-playing' && state.compactPlayerMode) {
+    if (state.appSection !== 'now-playing') {
+      state.lastNonPlayerSection = state.appSection;
+    }
+    state.appSection = normalizeAppSection(state.lastNonPlayerSection || 'home');
     state.mobilePlayerOpen = true;
+  } else {
+    state.appSection = normalizedSection;
+    if (normalizedSection !== 'now-playing') {
+      state.lastNonPlayerSection = normalizedSection;
+      state.mobilePlayerOpen = false;
+    }
+  }
+
+  if (!state.compactPlayerMode && normalizedSection === 'now-playing') {
+    state.mobilePlayerOpen = false;
   } else if (normalizedSection !== 'now-playing') {
-    state.lastNonPlayerSection = normalizedSection;
     state.mobilePlayerOpen = false;
   }
 
@@ -644,8 +651,7 @@ function updateBrowseTabs() {
 
 function updatePlaylistControls() {
   ensureSelectedPlaylist();
-  const showControls =
-    state.appSection === 'playlists' && state.tracks.length > 0;
+  const showControls = state.appSection === 'playlists';
   playlistControls.hidden = !showControls;
 
   playlistSelect.innerHTML = '';
@@ -1158,13 +1164,25 @@ function renderSearchResults() {
 }
 
 function renderLibraryBrowser() {
-  clearLibraryButton.hidden = state.tracks.length === 0 && state.playlists.length === 0;
   updateFileAccessControls();
-  updateBrowseTabs();
   updatePlaylistControls();
-  updateSearchControls();
-  renderPlaylistsView();
   updateHomeSession();
+  updateSummary();
+  updateNowPlaying();
+  renderQueue();
+  clearLibraryButton.hidden = state.tracks.length === 0 && state.playlists.length === 0;
+
+  if (state.appSection === 'playlists') {
+    renderPlaylistsView();
+    return;
+  }
+
+  if (state.appSection !== 'library') {
+    return;
+  }
+
+  updateBrowseTabs();
+  updateSearchControls();
 
   if (state.tracks.length === 0 && state.playlists.length === 0) {
     emptyState.hidden = false;
@@ -1172,9 +1190,6 @@ function renderLibraryBrowser() {
     albumList.hidden = true;
     artistList.hidden = true;
     searchResults.hidden = true;
-    updateSummary();
-    updateNowPlaying();
-    renderQueue();
     return;
   }
 
@@ -1189,9 +1204,6 @@ function renderLibraryBrowser() {
     albumList.hidden = true;
     artistList.hidden = true;
     renderSearchResults();
-    updateSummary();
-    updateNowPlaying();
-    renderQueue();
     return;
   }
 
@@ -1208,10 +1220,6 @@ function renderLibraryBrowser() {
   } else {
     renderArtistsView();
   }
-
-  updateSummary();
-  updateNowPlaying();
-  renderQueue();
 }
 
 function mergeTracks(importedTracks) {
@@ -1429,7 +1437,7 @@ function setQueueTrack(trackId, options = {}) {
         console.warn('Playback start failed.', error);
         state.player.paused = true;
         updateNowPlaying();
-        renderLibraryBrowser();
+        renderQueue();
       });
     } else {
       audioPlayer.pause();
@@ -1441,7 +1449,7 @@ function setQueueTrack(trackId, options = {}) {
   }
 
   updateNowPlaying();
-  renderLibraryBrowser();
+  renderQueue();
   return true;
 }
 
@@ -1471,7 +1479,7 @@ function togglePlayback(trackId = state.player.currentTrackId) {
       .then(() => {
         state.player.paused = false;
         updateNowPlaying();
-        renderLibraryBrowser();
+        renderQueue();
       })
       .catch(error => {
         console.warn('Playback resume failed.', error);
@@ -1532,7 +1540,8 @@ function toggleLike(trackId = state.player.currentTrackId) {
     : [...state.likedTrackIds, track.id];
   state.likedTrackIds = normalizeLikedTrackIds(state.likedTrackIds, state.tracks);
   saveLibrary();
-  renderLibraryBrowser();
+  updateNowPlaying();
+  renderQueue();
   setStatus(
     liked ? `Removed "${track.title}" from liked songs.` : `Added "${track.title}" to liked songs.`,
     'success'
@@ -1762,13 +1771,13 @@ function registerPlayerEvents() {
   audioPlayer.addEventListener('play', () => {
     state.player.paused = false;
     updateNowPlaying();
-    renderLibraryBrowser();
+    renderQueue();
   });
 
   audioPlayer.addEventListener('pause', () => {
     state.player.paused = true;
     updateNowPlaying();
-    renderLibraryBrowser();
+    renderQueue();
   });
 
   audioPlayer.addEventListener('timeupdate', () => {
@@ -1798,7 +1807,7 @@ function registerPlayerEvents() {
     state.player.paused = true;
     state.player.currentTime = 0;
     updateNowPlaying();
-    renderLibraryBrowser();
+    renderQueue();
   });
 }
 
