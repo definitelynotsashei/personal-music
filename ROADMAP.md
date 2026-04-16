@@ -116,7 +116,7 @@ Build local file import plus normalized track-library rendering, then make that 
 
 ### Current Recommended Task
 
-Build the next PWA/offline polish slice: strengthen installable behavior and baseline offline resilience for the core app shell and current local-library flow.
+Build the next durable file-access slice: improve local-library reopening so persisted tracks are closer to playable after reload instead of living only as metadata.
 
 ### Current UI Direction
 

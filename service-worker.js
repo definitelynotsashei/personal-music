@@ -1,10 +1,13 @@
-const CACHE_VERSION = 'music-player-v13';
+const CACHE_VERSION = 'music-player-v14';
 const CORE_ASSETS = [
   './',
   './index.html',
   './app.js',
+  './manifest.json',
   './styles.css',
-  './src/library.js'
+  './src/library.js',
+  './icons/icon-192.svg',
+  './icons/icon-512.svg'
 ];
 
 self.addEventListener('install', event => {
@@ -27,6 +30,13 @@ self.addEventListener('activate', event => {
 
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') {
+    return;
+  }
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('./index.html'))
+    );
     return;
   }
 

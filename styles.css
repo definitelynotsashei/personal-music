@@ -263,6 +263,32 @@ h3,
   margin-top: 1.25rem;
 }
 
+.app-status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.shell-card {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.shell-card strong[data-tone='success'] {
+  color: #5d7a69;
+}
+
+.shell-card strong[data-tone='warning'] {
+  color: var(--warning);
+}
+
+.install-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
 .browse-tabs {
   display: flex;
   gap: 0.75rem;
@@ -1088,6 +1114,7 @@ audio {
   }
 
   .hero-grid,
+  .app-status-grid,
   .summary-grid,
   .search-controls,
   .playlist-controls,

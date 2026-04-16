@@ -14,6 +14,7 @@ test('core project files exist', () => {
     'CHANGELOG.md',
     'index.html',
     'app.js',
+    'manifest.json',
     'src/library.js',
     'styles.css',
     'service-worker.js',
@@ -34,6 +35,20 @@ test('mobile now-playing controls exist in the app shell', () => {
   assert.match(html, /id="open-expanded-player"/);
   assert.match(html, /id="expand-player-button"/);
   assert.match(html, /id="close-expanded-player"/);
+});
+
+test('pwa shell assets exist', () => {
+  [
+    'manifest.json',
+    path.join('icons', 'icon-192.svg'),
+    path.join('icons', 'icon-512.svg')
+  ].forEach(file => {
+    assert.equal(
+      fs.existsSync(path.join(ROOT, file)),
+      true,
+      `${file} should exist`
+    );
+  });
 });
 
 test('filename parsing extracts fallback artist and title data', async () => {

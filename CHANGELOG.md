@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - PWA And Offline Polish Slice
+
+### Features
+- Added the first honest PWA/offline polish pass with a web app manifest, install prompt handling, cached shell assets, and clearer online/offline/install messaging around session-bound playback.
+
+### Documentation
+- Advanced the roadmap and project state from PWA/offline polish into the next durable file-access slice.
+
+### Tests
+- Expanded regression coverage for manifest and icon shell assets.
+
 ## 2026-04-16 - Mobile Now-Playing Polish Slice
 
 ### Features

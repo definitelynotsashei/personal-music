@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Personal Music Player</title>
+    <meta name="theme-color" content="#8f7965" />
+    <link rel="manifest" href="manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -35,6 +37,35 @@
           <span>Muted color, soft contrast</span>
           <span>Playback-first and uncluttered</span>
           <span>Personal library only</span>
+        </div>
+      </section>
+
+      <section class="panel app-status-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">App shell</p>
+            <h2>Install and offline</h2>
+          </div>
+        </div>
+
+        <div class="app-status-grid">
+          <article class="summary-card shell-card">
+            <span class="summary-label">Connection</span>
+            <strong id="connection-status">Online</strong>
+            <p id="offline-note" class="hint">
+              The app shell can stay available offline, but actual audio playback still needs files imported in the current session.
+            </p>
+          </article>
+
+          <article class="summary-card shell-card">
+            <span class="summary-label">Install</span>
+            <strong id="install-status">Browser install not ready</strong>
+            <div class="install-actions">
+              <button id="install-app-button" class="button button-primary" type="button" hidden>
+                Install App
+              </button>
+            </div>
+          </article>
         </div>
       </section>
 

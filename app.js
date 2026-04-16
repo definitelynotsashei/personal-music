@@ -26,6 +26,10 @@ const serviceWorkerSupported = 'serviceWorker' in navigator;
 const fileInput = document.querySelector('#file-input');
 const folderInput = document.querySelector('#folder-input');
 const importStatus = document.querySelector('#import-status');
+const connectionStatus = document.querySelector('#connection-status');
+const offlineNote = document.querySelector('#offline-note');
+const installStatus = document.querySelector('#install-status');
+const installAppButton = document.querySelector('#install-app-button');
 const trackCount = document.querySelector('#track-count');
 const artistCount = document.querySelector('#artist-count');
 const albumCount = document.querySelector('#album-count');
@@ -106,6 +110,7 @@ const state = {
   searchQuery: '',
   mobilePlayerOpen: false,
   compactPlayerMode: false,
+  installPromptEvent: null,
   player: {
     currentTrackId: null,
     paused: true,
@@ -117,6 +122,37 @@ const state = {
     shuffle: false
   }
 };
+
+function updateConnectionStatus() {
+  const online = navigator.onLine;
+  connectionStatus.textContent = online ? 'Online' : 'Offline';
+  connectionStatus.dataset.tone = online ? 'success' : 'warning';
+  offlineNote.textContent = online
+    ? 'The app shell can stay available offline, but actual audio playback still needs files imported in the current session.'
+    : 'You are offline. Cached app screens can still load, but playback still needs audio files imported in this browser session.';
+}
+
+function updateInstallStatus() {
+  if (window.matchMedia('(display-mode: standalone)').matches) {
+    installStatus.textContent = 'Installed';
+    installStatus.dataset.tone = 'success';
+    installAppButton.hidden = true;
+    installAppButton.disabled = true;
+    return;
+  }
+
+  if (state.installPromptEvent) {
+    installStatus.textContent = 'Install ready';
+    installStatus.dataset.tone = 'success';
+    installAppButton.hidden = false;
+    installAppButton.disabled = false;
+    return;
+  }
+
+  installStatus.textContent = 'Browser install not ready';
+  installStatus.dataset.tone = 'warning';
+  installAppButton.hidden = true;
+}
 
 function updatePlayerShellMode() {
   const compactPlayerMode = window.matchMedia('(max-width: 760px)').matches;
@@ -385,7 +421,7 @@ function updateNowPlaying() {
     albumArtMark.textContent = 'LP';
     stickyAlbumArtMark.textContent = 'LP';
     playerNote.textContent =
-      'Import tracks in this session to wake the room up. Reloaded metadata still needs the original files before playback can start again.';
+      'The room can stay installed and cached, but playback still needs tracks imported in this browser session. Reloaded metadata alone cannot reopen the files yet.';
     setIconButton(playButton, 'play', 'Play');
     currentTime.textContent = '0:00';
     durationTime.textContent = '--:--';
@@ -426,10 +462,10 @@ function updateNowPlaying() {
 
   if (canPlayTrack(currentTrack)) {
     playerNote.textContent =
-      'Playback is live for tracks imported in this session. Likes, playlists, and recent history stay tucked into the local library.';
+      'Playback is live for tracks imported in this session. Likes, playlists, recent history, and the app shell stay tucked into the local library.';
   } else {
     playerNote.textContent =
-      'This track came back from the saved library, but the room needs the original files re-imported before it can play again.';
+      'This track came back from the saved library, but the room still needs the original files re-imported before it can play again.';
   }
 
   updateModeButtons();
@@ -1251,7 +1287,7 @@ async function handleImport(fileList) {
     const saved = saveLibrary();
     renderLibraryBrowser();
     setStatus(
-      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library, likes, playlists, and recent history were saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback, queue, browsing, and personal library features are available for the files imported in this session.`,
+      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library, likes, playlists, and recent history were saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} The app shell can stay cached, but playback still belongs to the files imported in this session.`,
       'success'
     );
   } catch (error) {
@@ -1384,6 +1420,20 @@ async function registerServiceWorker() {
   }
 }
 
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  state.installPromptEvent = event;
+  updateInstallStatus();
+});
+
+window.addEventListener('appinstalled', () => {
+  state.installPromptEvent = null;
+  updateInstallStatus();
+  setStatus('Installed the app shell for easier return visits. Playback still depends on imported files in this browser session.', 'success');
+});
+
+window.addEventListener('online', updateConnectionStatus);
+window.addEventListener('offline', updateConnectionStatus);
 window.addEventListener('resize', updatePlayerShellMode);
 window.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
@@ -1426,6 +1476,17 @@ openExpandedPlayerButton?.addEventListener('click', openExpandedPlayer);
 expandPlayerButton?.addEventListener('click', openExpandedPlayer);
 stickyAlbumArt?.addEventListener('click', openExpandedPlayer);
 closeExpandedPlayerButton?.addEventListener('click', closeExpandedPlayer);
+installAppButton?.addEventListener('click', async () => {
+  if (!state.installPromptEvent) {
+    return;
+  }
+
+  const promptEvent = state.installPromptEvent;
+  promptEvent.prompt();
+  await promptEvent.userChoice.catch(() => null);
+  state.installPromptEvent = null;
+  updateInstallStatus();
+});
 likeButton?.addEventListener('click', () => toggleLike());
 playButton?.addEventListener('click', () => togglePlayback());
 previousButton?.addEventListener('click', () => stepQueue(-1));
@@ -1451,6 +1512,8 @@ volumeInput?.addEventListener('input', event => {
 
 registerPlayerEvents();
 updatePlayerShellMode();
+updateConnectionStatus();
+updateInstallStatus();
 
 if (loadStoredLibrary()) {
   resetQueueFromTracks();

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <rect width="192" height="192" rx="44" fill="#d8cbb9"/>
+  <rect x="18" y="18" width="156" height="156" rx="36" fill="#f5e9dd" opacity="0.92"/>
+  <circle cx="96" cy="96" r="56" fill="#c3a1a0"/>
+  <circle cx="96" cy="96" r="41" fill="#98a38f"/>
+  <circle cx="96" cy="96" r="27" fill="#8ea1b0"/>
+  <circle cx="96" cy="96" r="12" fill="#efe4d6"/>
+  <text x="96" y="103" text-anchor="middle" font-size="22" font-family="Lora, Georgia, serif" fill="#3d342e" letter-spacing="4">LP</text>
+</svg>
