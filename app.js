@@ -8,6 +8,7 @@ import {
   formatDuration,
   getNextQueueIndex,
   getQueueIndex,
+  getTrackSourceKey,
   groupTracksByAlbum,
   groupTracksByArtist,
   insertAfterCurrent,
@@ -56,6 +57,7 @@ const playlistDetailTitle = document.querySelector('#playlist-detail-title');
 const playlistDetailMeta = document.querySelector('#playlist-detail-meta');
 const playlistDetailEmptyState = document.querySelector('#playlist-detail-empty-state');
 const playlistTrackList = document.querySelector('#playlist-track-list');
+const reconnectLibraryFolderButton = document.querySelector('#reconnect-library-folder');
 const clearLibraryButton = document.querySelector('#clear-library');
 const audioPlayer = document.querySelector('#audio-player');
 const playerPanel = document.querySelector('#player-panel');
@@ -83,6 +85,11 @@ const durationTime = document.querySelector('#duration-time');
 const queueList = document.querySelector('#queue-list');
 const queueEmptyState = document.querySelector('#queue-empty-state');
 const queueNote = document.querySelector('#queue-note');
+const directoryPickerSupported = typeof window.showDirectoryPicker === 'function';
+const indexedDbSupported = typeof window.indexedDB !== 'undefined';
+const LIBRARY_ACCESS_DB_NAME = 'personal-music-player.file-access.v1';
+const LIBRARY_ACCESS_STORE = 'handles';
+const LIBRARY_DIRECTORY_HANDLE_KEY = 'library-directory';
 
 function getIconMarkup(name) {
   const icons = {
@@ -121,6 +128,7 @@ const state = {
   searchQuery: '',
   mobilePlayerOpen: false,
   compactPlayerMode: false,
+  durableReconnectInFlight: false,
   installPromptEvent: null,
   lastNonPlayerSection: 'home',
   player: {
@@ -140,8 +148,8 @@ function updateConnectionStatus() {
   connectionStatus.textContent = online ? 'Online' : 'Offline';
   connectionStatus.dataset.tone = online ? 'success' : 'warning';
   offlineNote.textContent = online
-    ? 'The app shell can stay available offline, but actual audio playback still needs files imported in the current session.'
-    : 'You are offline. Cached app screens can still load, but playback still needs audio files imported in this browser session.';
+    ? 'The app shell can stay available offline. Saved tracks can reconnect through Settings when this browser supports library-folder access.'
+    : 'You are offline. Cached app screens can still load, and a previously granted library folder can still help restore playback sources locally.';
 }
 
 function updateInstallStatus() {
@@ -258,6 +266,187 @@ function revokeTrackSources(tracks) {
       URL.revokeObjectURL(track.src);
     }
   });
+}
+
+function supportsDurableReconnect() {
+  return directoryPickerSupported && indexedDbSupported;
+}
+
+function getMissingPlaybackCount() {
+  return state.tracks.filter(track => !canPlayTrack(track)).length;
+}
+
+function updateFileAccessControls() {
+  if (!reconnectLibraryFolderButton) {
+    return;
+  }
+
+  const hasLibrary = state.tracks.length > 0;
+  reconnectLibraryFolderButton.hidden = !hasLibrary;
+  reconnectLibraryFolderButton.disabled =
+    !hasLibrary || !supportsDurableReconnect() || state.importInFlight || state.durableReconnectInFlight;
+  reconnectLibraryFolderButton.title = supportsDurableReconnect()
+    ? ''
+    : 'Reconnecting a library folder currently needs IndexedDB and the File System Access API.';
+}
+
+function openLibraryAccessDatabase() {
+  return new Promise((resolve, reject) => {
+    if (!indexedDbSupported) {
+      reject(new Error('IndexedDB is unavailable.'));
+      return;
+    }
+
+    const request = window.indexedDB.open(LIBRARY_ACCESS_DB_NAME, 1);
+    request.addEventListener('upgradeneeded', () => {
+      const database = request.result;
+      if (!database.objectStoreNames.contains(LIBRARY_ACCESS_STORE)) {
+        database.createObjectStore(LIBRARY_ACCESS_STORE);
+      }
+    });
+    request.addEventListener('success', () => resolve(request.result));
+    request.addEventListener('error', () => reject(request.error));
+  });
+}
+
+function waitForTransaction(transaction) {
+  return new Promise((resolve, reject) => {
+    transaction.addEventListener('complete', resolve, { once: true });
+    transaction.addEventListener('error', () => reject(transaction.error), { once: true });
+    transaction.addEventListener('abort', () => reject(transaction.error), { once: true });
+  });
+}
+
+async function savePersistedLibraryDirectoryHandle(handle) {
+  const database = await openLibraryAccessDatabase();
+  try {
+    const transaction = database.transaction(LIBRARY_ACCESS_STORE, 'readwrite');
+    transaction.objectStore(LIBRARY_ACCESS_STORE).put(handle, LIBRARY_DIRECTORY_HANDLE_KEY);
+    await waitForTransaction(transaction);
+  } finally {
+    database.close();
+  }
+}
+
+async function loadPersistedLibraryDirectoryHandle() {
+  const database = await openLibraryAccessDatabase();
+  try {
+    const transaction = database.transaction(LIBRARY_ACCESS_STORE, 'readonly');
+    const request = transaction.objectStore(LIBRARY_ACCESS_STORE).get(LIBRARY_DIRECTORY_HANDLE_KEY);
+    const result = await new Promise((resolve, reject) => {
+      request.addEventListener('success', () => resolve(request.result), { once: true });
+      request.addEventListener('error', () => reject(request.error), { once: true });
+    });
+    await waitForTransaction(transaction);
+    return result ?? null;
+  } finally {
+    database.close();
+  }
+}
+
+async function clearPersistedLibraryDirectoryHandle() {
+  if (!indexedDbSupported) {
+    return;
+  }
+
+  const database = await openLibraryAccessDatabase();
+  try {
+    const transaction = database.transaction(LIBRARY_ACCESS_STORE, 'readwrite');
+    transaction.objectStore(LIBRARY_ACCESS_STORE).delete(LIBRARY_DIRECTORY_HANDLE_KEY);
+    await waitForTransaction(transaction);
+  } finally {
+    database.close();
+  }
+}
+
+async function getDirectoryHandlePermission(handle, requestPermission = false) {
+  if (!handle) {
+    return 'denied';
+  }
+
+  try {
+    let permission = await handle.queryPermission({ mode: 'read' });
+    if (permission !== 'granted' && requestPermission && handle.requestPermission) {
+      permission = await handle.requestPermission({ mode: 'read' });
+    }
+    return permission;
+  } catch {
+    return 'denied';
+  }
+}
+
+async function collectAudioFilesFromDirectory(directoryHandle, parentPath = '') {
+  const fileDescriptors = [];
+
+  for await (const entry of directoryHandle.values()) {
+    const relativePath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+
+    if (entry.kind === 'directory') {
+      fileDescriptors.push(...await collectAudioFilesFromDirectory(entry, relativePath));
+      continue;
+    }
+
+    if (!isSupportedAudioFile({ name: entry.name })) {
+      continue;
+    }
+
+    const file = await entry.getFile();
+    fileDescriptors.push({ file, relativePath });
+  }
+
+  return fileDescriptors;
+}
+
+function buildTrackFileInput(file, relativePath = '') {
+  return {
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    lastModified: file.lastModified,
+    webkitRelativePath: relativePath,
+    arrayBuffer: () => file.arrayBuffer()
+  };
+}
+
+function buildReconnectSourceMap(fileDescriptors) {
+  const sourceMap = new Map();
+
+  fileDescriptors.forEach(({ file, relativePath = '' }) => {
+    const key = getTrackSourceKey({
+      name: file.name,
+      filename: file.name,
+      relativePath,
+      size: file.size,
+      lastModified: file.lastModified
+    });
+
+    if (!sourceMap.has(key)) {
+      sourceMap.set(key, file);
+    }
+  });
+
+  return sourceMap;
+}
+
+async function reconnectTrackSources(fileDescriptors) {
+  const sourceMap = buildReconnectSourceMap(fileDescriptors);
+  const reconnectableTracks = state.tracks.filter(track => !canPlayTrack(track));
+  let restoredCount = 0;
+
+  for (const track of reconnectableTracks) {
+    const file = sourceMap.get(getTrackSourceKey(track));
+    if (!file) {
+      continue;
+    }
+
+    track.src = URL.createObjectURL(file);
+    if (!Number.isFinite(track.duration)) {
+      track.duration = await loadTrackDurationFromUrl(track.src);
+    }
+    restoredCount += 1;
+  }
+
+  return restoredCount;
 }
 
 function saveLibrary() {
@@ -382,7 +571,7 @@ function updateHomeSession() {
   homeCurrentMeta.textContent = `${currentTrack.artist} | ${currentTrack.album}`;
   homeSessionNote.textContent = canPlayTrack(currentTrack)
     ? 'Playback is active for files imported in this browser session. Use Now Playing for queue control and the full player.'
-    : 'This track came back from saved metadata. Re-import the original files in this session when you want playback again.';
+    : 'This track came back from saved metadata. Reconnect the library folder in Settings or re-import the files when you want playback again.';
 }
 
 function syncTransportButtons() {
@@ -484,7 +673,7 @@ function updateNowPlaying() {
     albumArtMark.textContent = 'LP';
     stickyAlbumArtMark.textContent = 'LP';
     playerNote.textContent =
-      'The room can stay installed and cached, but playback still needs tracks imported in this browser session. Reloaded metadata alone cannot reopen the files yet.';
+      'The room can stay installed and cached, and saved metadata can reconnect through Settings when the browser supports it. Playback still needs real local files, not metadata alone.';
     setIconButton(playButton, 'play', 'Play');
     currentTime.textContent = '0:00';
     durationTime.textContent = '--:--';
@@ -528,7 +717,7 @@ function updateNowPlaying() {
       'Playback is live for tracks imported in this session. Likes, playlists, recent history, and the app shell stay tucked into the local library.';
   } else {
     playerNote.textContent =
-      'This track came back from the saved library, but the room still needs the original files re-imported before it can play again.';
+      'This track came back from the saved library, but the room still needs the original files reconnected or re-imported before it can play again.';
   }
 
   updateModeButtons();
@@ -943,6 +1132,7 @@ function renderSearchResults() {
 
 function renderLibraryBrowser() {
   clearLibraryButton.hidden = state.tracks.length === 0 && state.playlists.length === 0;
+  updateFileAccessControls();
   updateBrowseTabs();
   updatePlaylistControls();
   updateSearchControls();
@@ -1064,17 +1254,105 @@ function loadTrackDurationFromUrl(url) {
 }
 
 async function normalizeFiles(fileList) {
-  const files = [...fileList].filter(isSupportedAudioFile);
+  const files = [...fileList]
+    .map(entry => ('file' in entry ? entry : { file: entry, relativePath: entry.webkitRelativePath || '' }))
+    .filter(entry => isSupportedAudioFile(entry.file));
   const tracks = [];
 
-  for (const file of files) {
-    const track = await buildTrackFromFile(file);
+  for (const { file, relativePath } of files) {
+    const track = await buildTrackFromFile(buildTrackFileInput(file, relativePath));
     track.src = URL.createObjectURL(file);
     track.duration = await loadTrackDurationFromUrl(track.src);
     tracks.push(track);
   }
 
   return tracks;
+}
+
+async function reconnectLibraryFromDirectoryHandle(
+  directoryHandle,
+  { persistHandle = false, requestPermission = false, announceFailure = true } = {}
+) {
+  if (!directoryHandle || state.durableReconnectInFlight) {
+    return 0;
+  }
+
+  state.durableReconnectInFlight = true;
+  updateFileAccessControls();
+
+  try {
+    const permission = await getDirectoryHandlePermission(directoryHandle, requestPermission);
+    if (permission !== 'granted') {
+      if (announceFailure) {
+        setStatus(
+          'Library folder access was not granted. Reconnect it again when you want saved tracks to become playable.',
+          'warning'
+        );
+      }
+      return 0;
+    }
+
+    setStatus('Scanning the saved library folder to reconnect playback sources...', 'normal');
+    const fileDescriptors = await collectAudioFilesFromDirectory(directoryHandle);
+    const restoredCount = await reconnectTrackSources(fileDescriptors);
+
+    if (persistHandle) {
+      await savePersistedLibraryDirectoryHandle(directoryHandle);
+    }
+
+    if (restoredCount > 0) {
+      saveLibrary();
+      renderLibraryBrowser();
+      setStatus(
+        `Reconnected ${restoredCount} saved track${restoredCount === 1 ? '' : 's'} from the library folder. Matching tracks are playable again in this session.`,
+        'success'
+      );
+      return restoredCount;
+    }
+
+    if (announceFailure) {
+      setStatus(
+        'No saved tracks matched the selected library folder. Try the original folder layout or re-import the files.',
+        'warning'
+      );
+    }
+    return 0;
+  } catch (error) {
+    console.warn('Library folder reconnect failed.', error);
+    if (announceFailure) {
+      setStatus(
+        'Library folder reconnect failed while reading local files. Try the folder again or fall back to importing files.',
+        'error'
+      );
+    }
+    return 0;
+  } finally {
+    state.durableReconnectInFlight = false;
+    updateFileAccessControls();
+  }
+}
+
+async function restorePersistedLibraryAccess() {
+  if (!supportsDurableReconnect() || state.tracks.length === 0 || getMissingPlaybackCount() === 0) {
+    updateFileAccessControls();
+    return 0;
+  }
+
+  try {
+    const directoryHandle = await loadPersistedLibraryDirectoryHandle();
+    if (!directoryHandle) {
+      return 0;
+    }
+
+    return reconnectLibraryFromDirectoryHandle(directoryHandle, {
+      persistHandle: false,
+      requestPermission: false,
+      announceFailure: false
+    });
+  } catch (error) {
+    console.warn('Persisted library access restore failed.', error);
+    return 0;
+  }
 }
 
 function markTrackRecent(trackId) {
@@ -1148,7 +1426,7 @@ function togglePlayback(trackId = state.player.currentTrackId) {
 
   if (!canPlayTrack(targetTrack)) {
     setStatus(
-      'This track was restored from saved metadata. Re-import the source files in this session to enable playback.',
+      'This track was restored from saved metadata. Reconnect the library folder in Settings or re-import the source files to enable playback.',
       'warning'
     );
     updateNowPlaying();
@@ -1372,7 +1650,7 @@ async function handleImport(fileList) {
     const saved = saveLibrary();
     renderLibraryBrowser();
     setStatus(
-      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library, likes, playlists, and recent history were saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} The app shell can stay cached, but playback still belongs to the files imported in this session.`,
+      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library, likes, playlists, and recent history were saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} The app shell can stay cached, and Settings can reconnect a saved folder later when the browser supports it.`,
       'success'
     );
   } catch (error) {
@@ -1432,6 +1710,9 @@ function handleClearLibrary() {
   audioPlayer.removeAttribute('src');
   audioPlayer.load();
   clearStoredLibrary();
+  clearPersistedLibraryDirectoryHandle().catch(error => {
+    console.warn('Failed to clear persisted library folder access.', error);
+  });
   state.player.currentTrackId = null;
   state.player.paused = true;
   state.player.currentTime = 0;
@@ -1529,6 +1810,34 @@ window.addEventListener('keydown', event => {
 
 fileInput?.addEventListener('change', event => handleImport(event.target.files));
 folderInput?.addEventListener('change', event => handleImport(event.target.files));
+reconnectLibraryFolderButton?.addEventListener('click', async () => {
+  if (!supportsDurableReconnect()) {
+    setStatus(
+      'Reconnect library folder currently needs IndexedDB and a browser with the File System Access API.',
+      'warning'
+    );
+    return;
+  }
+
+  try {
+    const directoryHandle = await window.showDirectoryPicker({ mode: 'read' });
+    await reconnectLibraryFromDirectoryHandle(directoryHandle, {
+      persistHandle: true,
+      requestPermission: true,
+      announceFailure: true
+    });
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      return;
+    }
+
+    console.warn('Directory picker failed.', error);
+    setStatus(
+      'Could not open the library folder picker. Try again or fall back to importing files directly.',
+      'error'
+    );
+  }
+});
 clearLibraryButton?.addEventListener('click', handleClearLibrary);
 trackList?.addEventListener('click', handleTrackListClick);
 playlistList?.addEventListener('click', handleTrackListClick);
@@ -1616,10 +1925,11 @@ if (loadStoredLibrary()) {
     state.player.queueIndex = 0;
   }
   setStatus(
-    'Loaded the locally saved library index for this browser, including likes, playlists, and recent history. Re-import files in this session to enable playback and queue actions.',
+    'Loaded the locally saved library index for this browser, including likes, playlists, and recent history. Reconnect the library folder in Settings or re-import files to enable playback and queue actions.',
     'success'
   );
 }
 
 renderLibraryBrowser();
+restorePersistedLibraryAccess();
 registerServiceWorker();

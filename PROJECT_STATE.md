@@ -4,7 +4,7 @@ _Last updated 2026-04-16. For context-sharing, not a coding reference._
 ---
 
 ## In Progress
-Returning to the next durable file-access slice after tightening tab ownership so the shell behaves more like distinct app surfaces than one long page.
+Following through on durable file access after landing the first reconnectable-folder slice for saved libraries.
 
 ---
 
@@ -18,6 +18,7 @@ A local-first personal music player intended for your own library, with a focus 
 - The app can import local audio files in-browser and render a normalized track list.
 - Library data is persisted locally in browser storage so reloads keep the current imported library model.
 - Playback works for tracks imported in the current browser session, with session-local file access as the current source model.
+- Chromium-based browsers can now reconnect a previously chosen library folder so matching saved tracks regain playback sources after reload.
 - Queue behavior works with explicit queue order instead of only the library sort order.
 - Library browsing works across tracks, albums, and artists instead of a single flat list.
 - The personal layer now includes persistent liked songs, playlists, and recently played history.
@@ -55,8 +56,8 @@ A local-first personal music player intended for your own library, with a focus 
 5. Personal layer.
 
 ### Current recommended next task
-- Improve the next durable file-access slice so the persisted library is closer to playable after reload.
-- Tomorrow's starting point should be durable file access, not more shell breadth, with any `app.js` cleanup kept strictly in support of that work.
+- Extend durable file access beyond the first reconnectable-folder slice, especially around broader browser support and smoother saved-access restoration.
+- Tomorrow's starting point should stay on file access follow-through, not more shell breadth, with any `app.js` cleanup kept strictly in support of that work.
 
 ---
 
@@ -116,9 +117,9 @@ const libraryState = {
 - Embedded metadata is primary, but fallback parsing is still required for incomplete files.
 - Full metadata editing is out of scope for the initial v1.
 - Audio file handles and richer persistent access are still to be designed beyond the initial imported library index.
-- Persisted library metadata survives reloads, but playback sources currently require session-local imports until durable file access is added.
+- Persisted library metadata survives reloads, and Chromium-based browsers can now reconnect a saved folder, but playback sources are still not universally durable across browsers or permission states.
 - Queue state is currently session-local and will not survive reloads until player-state persistence is added deliberately.
-- The app shell is now more installable and resilient, but playback still depends on session-local imports until durable file access is added.
+- The app shell is now more installable and resilient, but full cross-browser durable file access still needs follow-through beyond the first reconnectable-folder slice.
 
 ---
 

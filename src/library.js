@@ -42,6 +42,19 @@ function createTrackId(file) {
   ].join(':');
 }
 
+function getTrackSourceKey(track) {
+  const relativePath = sanitizeText(track?.relativePath).toLowerCase();
+  if (relativePath) {
+    return `path:${relativePath}`;
+  }
+
+  return `file:${[
+    sanitizeText(track?.filename || track?.name).toLowerCase(),
+    Number(track?.size || 0),
+    Number(track?.lastModified || 0)
+  ].join(':')}`;
+}
+
 function isSupportedAudioFile(file) {
   if (!file || !file.name) {
     return false;
@@ -648,7 +661,7 @@ function createLibrarySnapshot(
       trackNumber: Number.isFinite(track.trackNumber) ? track.trackNumber : null,
       year: sanitizeText(track.year) || null,
       genre: sanitizeText(track.genre) || null,
-      src: sanitizeText(track.src),
+      src: '',
       duration: Number.isFinite(track.duration) ? track.duration : null,
       filename: sanitizeText(track.filename),
       relativePath: sanitizeText(track.relativePath),
@@ -708,7 +721,7 @@ function parseStoredLibrary(rawValue) {
       trackNumber: Number.isFinite(track.trackNumber) ? track.trackNumber : null,
       year: sanitizeText(track.year) || null,
       genre: sanitizeText(track.genre) || null,
-      src: sanitizeText(track.src),
+      src: '',
       duration: Number.isFinite(track.duration) ? track.duration : null,
       filename: sanitizeText(track.filename),
       relativePath: sanitizeText(track.relativePath),
@@ -744,6 +757,7 @@ export {
   getNextQueueIndex,
   getQueueIndex,
   getTrackIndexById,
+  getTrackSourceKey,
   groupTracksByAlbum,
   groupTracksByArtist,
   insertAfterCurrent,

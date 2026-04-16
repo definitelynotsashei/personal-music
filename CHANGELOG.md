@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-04-16 - Durable Folder Reconnect Slice
+
+### Features
+- Added a Settings-based library-folder reconnect flow for Chromium-style file access so saved tracks can regain playable local sources after reload without rebuilding the whole library.
+- Tightened saved-library hydration so dead session `blob:` URLs are no longer treated as persisted playback sources across reloads.
+
+### Documentation
+- Advanced the roadmap and project state from the first durable file-access slice into the next follow-through work around broader reopening support.
+
+### Tests
+- Expanded regression coverage for the reconnect control, source-key matching helpers, and saved-library stripping of stale playback URLs.
+
 ## 2026-04-16 - Section Ownership Slice
 
 ### Features

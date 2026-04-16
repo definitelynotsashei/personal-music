@@ -368,10 +368,16 @@
               <span>Import folder</span>
               <input id="folder-input" type="file" accept="audio/*,.m4a,.flac,.aac,.ogg,.oga,.wav,.opus,.mp3" multiple webkitdirectory />
             </label>
+            <button id="reconnect-library-folder" class="button button-secondary" type="button">
+              Reconnect library folder
+            </button>
             <button id="clear-library" class="button button-secondary" type="button" hidden>
               Clear library
             </button>
           </div>
+          <p class="hint">
+            In Chromium-based browsers, reconnecting the same folder can restore playback sources for saved tracks after reload without rebuilding the whole library.
+          </p>
         </section>
 
         <section class="panel settings-notes-panel">
@@ -385,16 +391,16 @@
           <div class="settings-note-grid">
             <article class="summary-card shell-card">
               <span class="summary-label">Playback source</span>
-              <strong>Session-bound for now</strong>
+              <strong>Reconnectable after reload</strong>
               <p class="hint">
-                Saved metadata survives reloads, but real playback still depends on re-importing the original files in the current browser session.
+                Saved metadata still survives reloads first, but Chromium-based browsers can now reconnect the same library folder so matching tracks become playable again without a full re-import.
               </p>
             </article>
             <article class="summary-card shell-card">
               <span class="summary-label">Next roadmap gap</span>
-              <strong>Durable file access</strong>
+              <strong>Broader durable access</strong>
               <p class="hint">
-                The next major usability win is reopening the local library more directly after reload without pretending the current shell already solves that.
+                Folder reconnection is the first durable slice. Wider browser support and richer automatic reopening still need follow-through work.
               </p>
             </article>
           </div>

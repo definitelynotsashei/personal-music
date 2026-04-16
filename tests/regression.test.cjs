@@ -57,6 +57,12 @@ test('home shortcuts and playlist detail surfaces exist', () => {
   assert.match(html, /id="playlist-track-list"/);
 });
 
+test('settings includes a reconnect library folder control', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+  assert.match(html, /id="reconnect-library-folder"/);
+});
+
 test('pwa shell assets exist', () => {
   [
     'manifest.json',
@@ -187,6 +193,7 @@ test('library snapshots store normalized tracks and summary metadata', async () 
   assert.equal(snapshot.importSummary.trackCount, 1);
   assert.equal(snapshot.importSummary.artistCount, 1);
   assert.equal(snapshot.tracks[0].title, 'Feather');
+  assert.equal(snapshot.tracks[0].src, '');
   assert.deepEqual(snapshot.likedTrackIds, ['track-1']);
   assert.equal(snapshot.playlists.length, 1);
   assert.deepEqual(snapshot.playlists[0].trackIds, ['track-1']);
@@ -219,6 +226,7 @@ test('stored library parsing hydrates valid snapshots and rejects invalid ones',
 
   assert.equal(valid.tracks.length, 1);
   assert.equal(valid.importSummary.trackCount, 1);
+  assert.equal(valid.tracks[0].src, '');
   assert.deepEqual(valid.likedTrackIds, []);
   assert.equal(valid.savedAt, '2026-04-16T00:00:00.000Z');
 
@@ -307,6 +315,30 @@ test('stored library parsing hydrates playlists from current snapshots', async (
   assert.deepEqual(parsed.playlists[0].trackIds, ['track-1']);
   assert.deepEqual(parsed.likedTrackIds, ['track-1']);
   assert.deepEqual(parsed.recentTrackIds, ['track-1']);
+});
+
+test('track source keys prefer relative paths and fall back to file metadata', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { getTrackSourceKey } = await import(moduleUrl);
+
+  assert.equal(
+    getTrackSourceKey({
+      filename: '01 - Feather.mp3',
+      relativePath: 'Modal Soul/01 - Feather.mp3',
+      size: 123,
+      lastModified: 456
+    }),
+    'path:modal soul/01 - feather.mp3'
+  );
+
+  assert.equal(
+    getTrackSourceKey({
+      filename: '01 - Feather.mp3',
+      size: 123,
+      lastModified: 456
+    }),
+    'file:01 - feather.mp3:123:456'
+  );
 });
 
 test('library search ranks title matches and playlist matches', async () => {

@@ -116,12 +116,12 @@ Build local file import plus normalized track-library rendering, then make that 
 
 ### Current Recommended Task
 
-Build the next durable file-access slice: improve local-library reopening so persisted tracks are closer to playable after reload instead of living only as metadata.
+Build the next durable file-access follow-through: broaden library reopening beyond the first reconnectable-folder slice, especially for wider browser support and smoother automatic restoration.
 
 ### Next Session Reference
 
-- The shell is now separated enough that the next session should avoid more navigation breadth and focus on durable file access for persisted libraries.
-- Keep any cleanup scoped to touched surfaces only, especially if `app.js` needs light extraction while file-access work is underway.
+- The first reconnectable-folder slice now exists, so the next session should stay on durable file access instead of returning to shell breadth.
+- Focus next on broader browser coverage, richer saved-access restoration, or cleaner file-access extraction without widening unrelated UI scope.
 
 ### Current UI Direction
 
