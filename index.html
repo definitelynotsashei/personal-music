@@ -97,7 +97,7 @@
         <div class="panel-heading">
           <div>
             <p class="section-label">Now Playing</p>
-            <h2>Playback foundation</h2>
+            <h2>Playback and queue foundation</h2>
           </div>
           <p id="player-note" class="hint">
             Import tracks in this session to enable playback. Persisted metadata alone is not yet enough to reopen the underlying files after reload.
@@ -126,6 +126,15 @@
               </button>
             </div>
 
+            <div class="transport-row mode-row">
+              <button id="repeat-button" class="button button-secondary" type="button">
+                Repeat: Off
+              </button>
+              <button id="shuffle-button" class="button button-secondary" type="button">
+                Shuffle: Off
+              </button>
+            </div>
+
             <label class="range-group">
               <span>Seek</span>
               <input id="seek-input" type="range" min="0" max="0" step="1" value="0" />
@@ -144,6 +153,27 @@
         </div>
 
         <audio id="audio-player" preload="metadata"></audio>
+      </section>
+
+      <section class="panel queue-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">Queue</p>
+            <h2>Current playback order</h2>
+          </div>
+          <p id="queue-note" class="hint">
+            The queue starts from the current library order and becomes session-local as you add tracks or toggle shuffle.
+          </p>
+        </div>
+
+        <div id="queue-empty-state" class="empty-state">
+          <h3>No active queue</h3>
+          <p>
+            Import tracks to build the default queue, then add tracks or toggle shuffle to shape playback order.
+          </p>
+        </div>
+
+        <div id="queue-list" class="queue-list" hidden></div>
       </section>
     </main>
 

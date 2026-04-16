@@ -229,6 +229,12 @@ button.button {
   margin-top: 1rem;
 }
 
+.queue-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
 .player-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
@@ -263,6 +269,10 @@ button.button {
   flex-wrap: wrap;
 }
 
+.mode-row {
+  margin-top: 0.75rem;
+}
+
 .range-group {
   display: grid;
   gap: 0.45rem;
@@ -290,9 +300,25 @@ button.button {
   padding: 1rem 1.1rem;
 }
 
+.queue-row {
+  display: grid;
+  grid-template-columns: 3rem minmax(0, 1.5fr) minmax(0, 0.5fr);
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
 .track-row[data-current='true'] {
   border-color: rgba(108, 224, 192, 0.4);
   background: rgba(108, 224, 192, 0.06);
+}
+
+.queue-row[data-current='true'] {
+  border-color: rgba(199, 255, 102, 0.35);
+  background: rgba(199, 255, 102, 0.08);
 }
 
 .track-index {
@@ -319,10 +345,16 @@ button.button {
 .track-actions {
   display: flex;
   justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .track-play-button {
   min-width: 5.5rem;
+}
+
+.track-queue-button {
+  min-width: 6.8rem;
 }
 
 .track-play-button:disabled,
@@ -355,6 +387,7 @@ audio {
   .player-shell,
   .summary-grid,
   .track-row,
+  .queue-row,
   .panel-heading,
   .panel {
     grid-template-columns: 1fr;

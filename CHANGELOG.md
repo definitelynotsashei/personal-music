@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - Queue Foundation Slice
+
+### Features
+- Added the first queue foundation slice with explicit queue state, queue order, queue index, and basic repeat and shuffle behavior.
+
+### Documentation
+- Advanced the roadmap and project state from playback foundation into queue foundation.
+
+### Tests
+- Expanded regression coverage for queue-related helper behavior.
+
 ## 2026-04-16 - Playback Foundation Slice
 
 ### Features

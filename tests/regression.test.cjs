@@ -194,3 +194,39 @@ test('playability depends on a session playback source', async () => {
   assert.equal(canPlayTrack({ src: '' }), false);
   assert.equal(canPlayTrack(null), false);
 });
+
+test('default queue and queue indexing follow track ids', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { createDefaultQueue, getQueueIndex } = await import(moduleUrl);
+
+  const queue = createDefaultQueue([{ id: 'a' }, { id: 'b' }, { id: 'c' }]);
+
+  assert.deepEqual(queue, ['a', 'b', 'c']);
+  assert.equal(getQueueIndex(queue, 'b'), 1);
+  assert.equal(getQueueIndex(queue, 'missing'), -1);
+});
+
+test('insert after current keeps uniqueness and places track next', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { insertAfterCurrent } = await import(moduleUrl);
+
+  assert.deepEqual(
+    insertAfterCurrent(['a', 'b', 'c', 'd'], 1, 'd'),
+    ['a', 'b', 'd', 'c']
+  );
+
+  assert.deepEqual(
+    insertAfterCurrent(['a', 'b'], -1, 'b'),
+    ['b', 'a']
+  );
+});
+
+test('next queue index respects repeat mode', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { getNextQueueIndex } = await import(moduleUrl);
+
+  assert.equal(getNextQueueIndex(3, 0, 'off'), 1);
+  assert.equal(getNextQueueIndex(3, 2, 'off'), -1);
+  assert.equal(getNextQueueIndex(3, 2, 'all'), 0);
+  assert.equal(getNextQueueIndex(3, 1, 'one'), 1);
+});

@@ -4,7 +4,7 @@ _Last updated 2026-04-16. For context-sharing, not a coding reference._
 ---
 
 ## In Progress
-Starting playback foundation: real current-track state plus play/pause, previous/next, seek, and volume for tracks imported in the current browser session.
+Starting queue foundation: explicit queue state, queue order, queue index, and basic repeat and shuffle behavior on top of the current playback foundation.
 
 ---
 
@@ -17,7 +17,8 @@ A local-first personal music player intended for your own library, with a focus 
 - A minimal `service-worker.js` exists for future offline and cache work.
 - The app can import local audio files in-browser and render a normalized track list.
 - Library data is persisted locally in browser storage so reloads keep the current imported library model.
-- Playback is being added on top of the imported track list, with session-local file access as the current source model.
+- Playback works for tracks imported in the current browser session, with session-local file access as the current source model.
+- Queue behavior is being added so playback can follow an explicit ordered list instead of only the library sort order.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
 ### Current product snapshot
@@ -47,7 +48,7 @@ A local-first personal music player intended for your own library, with a focus 
 5. Personal layer.
 
 ### Current recommended next task
-- Finish the first playback slice by wiring current-track state, transport controls, seeking, and volume for session-imported files.
+- Finish the first queue slice by wiring queue order, queue index, repeat, and shuffle behavior around the current playback model.
 
 ---
 
@@ -108,6 +109,7 @@ const libraryState = {
 - Full metadata editing is out of scope for the initial v1.
 - Audio file handles and richer persistent access are still to be designed beyond the initial imported library index.
 - Persisted library metadata survives reloads, but playback sources currently require session-local imports until durable file access is added.
+- Queue state is currently session-local and will not survive reloads until player-state persistence is added deliberately.
 
 ---
 

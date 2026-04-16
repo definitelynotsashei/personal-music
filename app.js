@@ -1,11 +1,14 @@
 import {
   buildTrackFromFile,
   canPlayTrack,
+  createDefaultQueue,
   createLibrarySnapshot,
+  createShuffledQueue,
   formatDuration,
-  getAdjacentTrackId,
-  getTrackIndexById,
+  getNextQueueIndex,
+  getQueueIndex,
   isSupportedAudioFile,
+  insertAfterCurrent,
   LIBRARY_STORAGE_KEY,
   parseStoredLibrary,
   sortTracks,
@@ -29,10 +32,15 @@ const playerNote = document.querySelector('#player-note');
 const playButton = document.querySelector('#play-button');
 const previousButton = document.querySelector('#previous-button');
 const nextButton = document.querySelector('#next-button');
+const repeatButton = document.querySelector('#repeat-button');
+const shuffleButton = document.querySelector('#shuffle-button');
 const seekInput = document.querySelector('#seek-input');
 const volumeInput = document.querySelector('#volume-input');
 const currentTime = document.querySelector('#current-time');
 const durationTime = document.querySelector('#duration-time');
+const queueList = document.querySelector('#queue-list');
+const queueEmptyState = document.querySelector('#queue-empty-state');
+const queueNote = document.querySelector('#queue-note');
 
 const state = {
   tracks: [],
@@ -42,7 +50,11 @@ const state = {
     currentTrackId: null,
     paused: true,
     currentTime: 0,
-    volume: Number(volumeInput?.value || 0.8)
+    volume: Number(volumeInput?.value || 0.8),
+    queue: [],
+    queueIndex: -1,
+    repeatMode: 'off',
+    shuffle: false
   }
 };
 
@@ -86,18 +98,41 @@ function loadStoredLibrary() {
   return storedLibrary.tracks.length > 0;
 }
 
+function resetQueueFromTracks() {
+  state.player.queue = createDefaultQueue(state.tracks);
+  state.player.queueIndex = state.player.currentTrackId
+    ? getQueueIndex(state.player.queue, state.player.currentTrackId)
+    : state.player.queue.length > 0
+      ? 0
+      : -1;
+}
+
 function clearStoredLibrary() {
   revokeTrackSources(state.tracks);
   state.tracks = [];
   state.lastSavedAt = null;
+  state.player.queue = [];
+  state.player.queueIndex = -1;
 
   if (canUseLocalStorage()) {
     window.localStorage.removeItem(LIBRARY_STORAGE_KEY);
   }
 }
 
+function getTrackById(trackId) {
+  return state.tracks.find(track => track.id === trackId) ?? null;
+}
+
 function getCurrentTrack() {
-  return state.tracks.find(track => track.id === state.player.currentTrackId) ?? null;
+  return getTrackById(state.player.currentTrackId);
+}
+
+function getCurrentQueueTrack() {
+  if (state.player.queueIndex < 0) {
+    return null;
+  }
+
+  return getTrackById(state.player.queue[state.player.queueIndex]);
 }
 
 function setStatus(message, tone = 'normal') {
@@ -116,15 +151,27 @@ function syncTransportButtons() {
   const currentTrack = getCurrentTrack();
   const hasTracks = state.tracks.length > 0;
   const hasPlayableTrack = currentTrack ? canPlayTrack(currentTrack) : false;
-  const currentIndex = currentTrack
-    ? getTrackIndexById(state.tracks, currentTrack.id)
-    : -1;
 
   playButton.disabled = !hasPlayableTrack;
-  previousButton.disabled = !hasPlayableTrack || currentIndex <= 0;
-  nextButton.disabled = !hasPlayableTrack || currentIndex < 0 || currentIndex >= state.tracks.length - 1;
+  previousButton.disabled = !hasPlayableTrack || state.player.queueIndex <= 0;
+  nextButton.disabled =
+    !hasPlayableTrack ||
+    (state.player.repeatMode === 'off' &&
+      (state.player.queueIndex < 0 || state.player.queueIndex >= state.player.queue.length - 1));
   seekInput.disabled = !hasPlayableTrack;
   volumeInput.disabled = !hasTracks;
+  repeatButton.disabled = !hasTracks;
+  shuffleButton.disabled = !hasTracks;
+}
+
+function updateModeButtons() {
+  repeatButton.textContent =
+    state.player.repeatMode === 'off'
+      ? 'Repeat: Off'
+      : state.player.repeatMode === 'all'
+        ? 'Repeat: All'
+        : 'Repeat: One';
+  shuffleButton.textContent = state.player.shuffle ? 'Shuffle: On' : 'Shuffle: Off';
 }
 
 function updateNowPlaying() {
@@ -140,6 +187,7 @@ function updateNowPlaying() {
     durationTime.textContent = '--:--';
     seekInput.max = '0';
     seekInput.value = '0';
+    updateModeButtons();
     syncTransportButtons();
     return;
   }
@@ -152,18 +200,73 @@ function updateNowPlaying() {
     Number.isFinite(audioPlayer.duration) ? audioPlayer.duration : currentTrack.duration
   );
   seekInput.max = String(
-    Math.max(0, Math.floor(Number.isFinite(audioPlayer.duration) ? audioPlayer.duration : currentTrack.duration || 0))
+    Math.max(
+      0,
+      Math.floor(
+        Number.isFinite(audioPlayer.duration) ? audioPlayer.duration : currentTrack.duration || 0
+      )
+    )
   );
   seekInput.value = String(Math.min(Number(seekInput.max), Math.floor(state.player.currentTime)));
 
   if (canPlayTrack(currentTrack)) {
-    playerNote.textContent = 'Playback is available for tracks imported in the current browser session.';
+    playerNote.textContent =
+      'Playback is available for tracks imported in the current browser session. Queue behavior is session-local for now.';
   } else {
     playerNote.textContent =
       'This track was restored from the saved library index, but playback needs the original files to be imported again in this session.';
   }
 
+  updateModeButtons();
   syncTransportButtons();
+}
+
+function renderQueue() {
+  queueList.innerHTML = '';
+
+  if (state.player.queue.length === 0) {
+    queueEmptyState.hidden = false;
+    queueList.hidden = true;
+    queueNote.textContent =
+      'The queue starts from the current library order and becomes session-local as you add tracks or toggle shuffle.';
+    return;
+  }
+
+  queueEmptyState.hidden = true;
+  queueList.hidden = false;
+
+  const fragment = document.createDocumentFragment();
+
+  state.player.queue.forEach((trackId, index) => {
+    const track = getTrackById(trackId);
+    if (!track) {
+      return;
+    }
+
+    const item = document.createElement('article');
+    item.className = 'queue-row';
+    if (index === state.player.queueIndex) {
+      item.dataset.current = 'true';
+    }
+
+    item.innerHTML = `
+      <div class="track-index">${index + 1}</div>
+      <div class="track-main">
+        <strong>${track.title}</strong>
+        <p>${track.artist} | ${track.album}</p>
+      </div>
+      <div class="track-meta">
+        <span>${formatDuration(track.duration)}</span>
+      </div>
+    `;
+    fragment.append(item);
+  });
+
+  queueList.append(fragment);
+
+  queueNote.textContent = state.player.shuffle
+    ? 'Shuffle is active for this session queue. Repeat mode still applies to queue progression.'
+    : 'The queue follows an explicit session order. Add tracks or toggle shuffle to change playback flow.';
 }
 
 function renderTrackList() {
@@ -175,6 +278,7 @@ function renderTrackList() {
     trackList.hidden = true;
     updateSummary();
     updateNowPlaying();
+    renderQueue();
     return;
   }
 
@@ -203,6 +307,9 @@ function renderTrackList() {
         <button class="track-play-button button button-secondary" type="button" data-track-id="${track.id}" ${playbackDisabled}>
           ${actionLabel}
         </button>
+        <button class="track-queue-button button button-secondary" type="button" data-track-id="${track.id}">
+          Play Next
+        </button>
       </div>
       <div class="track-meta">
         <span>${formatDuration(track.duration)}</span>
@@ -215,6 +322,7 @@ function renderTrackList() {
   trackList.append(fragment);
   updateSummary();
   updateNowPlaying();
+  renderQueue();
 }
 
 function mergeTracks(importedTracks) {
@@ -227,13 +335,26 @@ function mergeTracks(importedTracks) {
 
   importedTracks.forEach(track => {
     const previousTrack = previousById.get(track.id);
-    if (previousTrack?.src && previousTrack.src !== track.src && previousTrack.src.startsWith('blob:')) {
+    if (
+      previousTrack?.src &&
+      previousTrack.src !== track.src &&
+      previousTrack.src.startsWith('blob:')
+    ) {
       URL.revokeObjectURL(previousTrack.src);
     }
     nextById.set(track.id, track);
   });
 
   state.tracks = sortTracks([...nextById.values()]);
+
+  if (state.player.shuffle && state.player.queue.length > 0) {
+    state.player.queue = createShuffledQueue(
+      createDefaultQueue(state.tracks),
+      state.player.currentTrackId
+    );
+  } else {
+    resetQueueFromTracks();
+  }
 }
 
 function loadTrackDurationFromUrl(url) {
@@ -280,12 +401,23 @@ async function normalizeFiles(fileList) {
   return tracks;
 }
 
-function selectTrack(trackId, options = {}) {
-  const track = state.tracks.find(entry => entry.id === trackId);
+function setQueueTrack(trackId, options = {}) {
+  const track = getTrackById(trackId);
   if (!track) {
     return false;
   }
 
+  if (state.player.queue.length === 0) {
+    resetQueueFromTracks();
+  }
+
+  let queueIndex = getQueueIndex(state.player.queue, track.id);
+  if (queueIndex < 0) {
+    state.player.queue.push(track.id);
+    queueIndex = state.player.queue.length - 1;
+  }
+
+  state.player.queueIndex = queueIndex;
   state.player.currentTrackId = track.id;
   state.player.currentTime = 0;
   state.player.paused = options.autoplay ? false : true;
@@ -296,14 +428,12 @@ function selectTrack(trackId, options = {}) {
     audioPlayer.volume = state.player.volume;
 
     if (options.autoplay) {
-      audioPlayer
-        .play()
-        .catch(error => {
-          console.warn('Playback start failed.', error);
-          state.player.paused = true;
-          updateNowPlaying();
-          renderTrackList();
-        });
+      audioPlayer.play().catch(error => {
+        console.warn('Playback start failed.', error);
+        state.player.paused = true;
+        updateNowPlaying();
+        renderTrackList();
+      });
     } else {
       audioPlayer.pause();
     }
@@ -319,7 +449,7 @@ function selectTrack(trackId, options = {}) {
 }
 
 function togglePlayback(trackId = state.player.currentTrackId) {
-  const targetTrack = state.tracks.find(track => track.id === trackId);
+  const targetTrack = getTrackById(trackId);
   if (!targetTrack) {
     return;
   }
@@ -334,7 +464,7 @@ function togglePlayback(trackId = state.player.currentTrackId) {
   }
 
   if (state.player.currentTrackId !== targetTrack.id) {
-    selectTrack(targetTrack.id, { autoplay: true });
+    setQueueTrack(targetTrack.id, { autoplay: true });
     return;
   }
 
@@ -355,18 +485,73 @@ function togglePlayback(trackId = state.player.currentTrackId) {
   audioPlayer.pause();
 }
 
-function stepTrack(offset) {
-  const nextTrackId = getAdjacentTrackId(
-    state.tracks,
-    state.player.currentTrackId,
-    offset
-  );
-
-  if (!nextTrackId) {
+function stepQueue(offset) {
+  if (state.player.queue.length === 0) {
     return;
   }
 
-  selectTrack(nextTrackId, { autoplay: true });
+  const nextIndex = state.player.queueIndex + offset;
+  if (nextIndex < 0 || nextIndex >= state.player.queue.length) {
+    return;
+  }
+
+  const nextTrackId = state.player.queue[nextIndex];
+  setQueueTrack(nextTrackId, { autoplay: true });
+}
+
+function queueTrackNext(trackId) {
+  const track = getTrackById(trackId);
+  if (!track) {
+    return;
+  }
+
+  if (state.player.queue.length === 0) {
+    resetQueueFromTracks();
+  }
+
+  state.player.queue = insertAfterCurrent(
+    state.player.queue,
+    state.player.queueIndex,
+    track.id
+  );
+
+  if (state.player.queueIndex < 0) {
+    state.player.queueIndex = 0;
+  }
+
+  renderTrackList();
+  setStatus(`Queued "${track.title}" to play next.`, 'success');
+}
+
+function cycleRepeatMode() {
+  state.player.repeatMode =
+    state.player.repeatMode === 'off'
+      ? 'all'
+      : state.player.repeatMode === 'all'
+        ? 'one'
+        : 'off';
+  updateNowPlaying();
+  renderQueue();
+}
+
+function toggleShuffleMode() {
+  state.player.shuffle = !state.player.shuffle;
+
+  if (state.player.shuffle) {
+    state.player.queue = createShuffledQueue(
+      createDefaultQueue(state.tracks),
+      state.player.currentTrackId
+    );
+  } else {
+    resetQueueFromTracks();
+  }
+
+  if (state.player.currentTrackId) {
+    state.player.queueIndex = getQueueIndex(state.player.queue, state.player.currentTrackId);
+  }
+
+  updateNowPlaying();
+  renderQueue();
 }
 
 async function handleImport(fileList) {
@@ -394,6 +579,7 @@ async function handleImport(fileList) {
 
     if (!currentTrackStillExists) {
       state.player.currentTrackId = tracks[0]?.id ?? null;
+      state.player.queueIndex = getQueueIndex(state.player.queue, state.player.currentTrackId);
       state.player.paused = true;
       state.player.currentTime = 0;
     }
@@ -401,7 +587,7 @@ async function handleImport(fileList) {
     const saved = saveLibrary();
     renderTrackList();
     setStatus(
-      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library metadata was saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback is available for the files imported in this session.`,
+      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library metadata was saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback and queue behavior are available for the files imported in this session.`,
       'success'
     );
   } catch (error) {
@@ -419,11 +605,15 @@ async function handleImport(fileList) {
 
 function handleTrackListClick(event) {
   const playButtonElement = event.target.closest('.track-play-button');
-  if (!playButtonElement) {
+  if (playButtonElement) {
+    togglePlayback(playButtonElement.dataset.trackId);
     return;
   }
 
-  togglePlayback(playButtonElement.dataset.trackId);
+  const queueButtonElement = event.target.closest('.track-queue-button');
+  if (queueButtonElement) {
+    queueTrackNext(queueButtonElement.dataset.trackId);
+  }
 }
 
 function handleClearLibrary() {
@@ -434,6 +624,8 @@ function handleClearLibrary() {
   state.player.currentTrackId = null;
   state.player.paused = true;
   state.player.currentTime = 0;
+  state.player.repeatMode = 'off';
+  state.player.shuffle = false;
   renderTrackList();
   setStatus('Cleared the locally stored library index for this browser.', 'warning');
 }
@@ -465,14 +657,15 @@ function registerPlayerEvents() {
   });
 
   audioPlayer.addEventListener('ended', () => {
-    const nextTrackId = getAdjacentTrackId(
-      state.tracks,
-      state.player.currentTrackId,
-      1
+    const nextIndex = getNextQueueIndex(
+      state.player.queue.length,
+      state.player.queueIndex,
+      state.player.repeatMode
     );
 
-    if (nextTrackId) {
-      selectTrack(nextTrackId, { autoplay: true });
+    if (nextIndex >= 0) {
+      const nextTrackId = state.player.queue[nextIndex];
+      setQueueTrack(nextTrackId, { autoplay: true });
       return;
     }
 
@@ -500,8 +693,10 @@ folderInput?.addEventListener('change', event => handleImport(event.target.files
 clearLibraryButton?.addEventListener('click', handleClearLibrary);
 trackList?.addEventListener('click', handleTrackListClick);
 playButton?.addEventListener('click', () => togglePlayback());
-previousButton?.addEventListener('click', () => stepTrack(-1));
-nextButton?.addEventListener('click', () => stepTrack(1));
+previousButton?.addEventListener('click', () => stepQueue(-1));
+nextButton?.addEventListener('click', () => stepQueue(1));
+repeatButton?.addEventListener('click', cycleRepeatMode);
+shuffleButton?.addEventListener('click', toggleShuffleMode);
 seekInput?.addEventListener('input', event => {
   if (!audioPlayer.src) {
     return;
@@ -522,11 +717,13 @@ volumeInput?.addEventListener('input', event => {
 registerPlayerEvents();
 
 if (loadStoredLibrary()) {
+  resetQueueFromTracks();
   if (state.tracks.length > 0) {
     state.player.currentTrackId = state.tracks[0].id;
+    state.player.queueIndex = 0;
   }
   setStatus(
-    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback.',
+    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback and queue behavior.',
     'success'
   );
 }

@@ -318,6 +318,57 @@ function canPlayTrack(track) {
   return Boolean(sanitizeText(track?.src));
 }
 
+function createDefaultQueue(tracks) {
+  return tracks.map(track => track.id);
+}
+
+function getQueueIndex(queue, trackId) {
+  return queue.findIndex(id => id === trackId);
+}
+
+function insertAfterCurrent(queue, queueIndex, trackId) {
+  const filteredQueue = queue.filter(id => id !== trackId);
+  const safeIndex = queueIndex < 0 ? -1 : Math.min(queueIndex, filteredQueue.length - 1);
+  const insertAt = safeIndex + 1;
+  const nextQueue = [...filteredQueue];
+  nextQueue.splice(insertAt, 0, trackId);
+  return nextQueue;
+}
+
+function getNextQueueIndex(queueLength, queueIndex, repeatMode) {
+  if (queueLength === 0) {
+    return -1;
+  }
+
+  if (repeatMode === 'one') {
+    return queueIndex < 0 ? 0 : queueIndex;
+  }
+
+  const nextIndex = queueIndex + 1;
+  if (nextIndex < queueLength) {
+    return nextIndex;
+  }
+
+  if (repeatMode === 'all') {
+    return 0;
+  }
+
+  return -1;
+}
+
+function createShuffledQueue(queue, currentTrackId) {
+  const remaining = queue.filter(id => id !== currentTrackId);
+
+  for (let index = remaining.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    const temp = remaining[index];
+    remaining[index] = remaining[swapIndex];
+    remaining[swapIndex] = temp;
+  }
+
+  return currentTrackId ? [currentTrackId, ...remaining] : remaining;
+}
+
 function createLibrarySnapshot(tracks) {
   const sortedTracks = sortTracks(tracks);
   const importSummary = summarizeLibrary(sortedTracks);
@@ -400,11 +451,16 @@ function parseStoredLibrary(rawValue) {
 export {
   buildTrackFromFile,
   canPlayTrack,
+  createDefaultQueue,
   createLibrarySnapshot,
   createTrackId,
+  createShuffledQueue,
   formatDuration,
   getAdjacentTrackId,
+  getNextQueueIndex,
+  getQueueIndex,
   getTrackIndexById,
+  insertAfterCurrent,
   isSupportedAudioFile,
   LIBRARY_STORAGE_KEY,
   normalizeImportedTrack,
