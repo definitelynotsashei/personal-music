@@ -30,6 +30,7 @@ This file is the durable handoff for future work sessions. Use it with
 - Initial project scaffold and documentation baseline.
 - Library foundation baseline: import local files, normalize metadata, persist the library index, and render a usable track list.
 - Playback foundation baseline: current-track state, transport controls, seek, and volume for session-imported files.
+- Queue foundation baseline: explicit queue state, queue order, queue index, and basic repeat and shuffle behavior.
 
 ## Stronger V1 Goal
 
@@ -111,7 +112,7 @@ Build local file import plus normalized track-library rendering, then make that 
 
 ### Current Recommended Task
 
-Build the first queue slice: explicit queue state, queue order, queue index, and basic repeat and shuffle decisions on top of the current playback foundation.
+Build the first library-browsing slice: explicit Tracks, Albums, and Artists views on top of the normalized library with mobile and desktop-friendly layout behavior.
 
 ### Current UI Direction
 

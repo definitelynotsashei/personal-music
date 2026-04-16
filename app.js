@@ -7,8 +7,10 @@ import {
   formatDuration,
   getNextQueueIndex,
   getQueueIndex,
-  isSupportedAudioFile,
+  groupTracksByAlbum,
+  groupTracksByArtist,
   insertAfterCurrent,
+  isSupportedAudioFile,
   LIBRARY_STORAGE_KEY,
   parseStoredLibrary,
   sortTracks,
@@ -24,6 +26,9 @@ const artistCount = document.querySelector('#artist-count');
 const albumCount = document.querySelector('#album-count');
 const emptyState = document.querySelector('#empty-state');
 const trackList = document.querySelector('#track-list');
+const albumList = document.querySelector('#album-list');
+const artistList = document.querySelector('#artist-list');
+const browseTabs = document.querySelectorAll('.browse-tab');
 const clearLibraryButton = document.querySelector('#clear-library');
 const audioPlayer = document.querySelector('#audio-player');
 const nowPlayingTitle = document.querySelector('#now-playing-title');
@@ -48,6 +53,7 @@ const state = {
   tracks: [],
   importInFlight: false,
   lastSavedAt: null,
+  browseView: 'tracks',
   player: {
     currentTrackId: null,
     paused: true,
@@ -129,14 +135,6 @@ function getCurrentTrack() {
   return getTrackById(state.player.currentTrackId);
 }
 
-function getCurrentQueueTrack() {
-  if (state.player.queueIndex < 0) {
-    return null;
-  }
-
-  return getTrackById(state.player.queue[state.player.queueIndex]);
-}
-
 function setStatus(message, tone = 'normal') {
   importStatus.textContent = message;
   importStatus.dataset.tone = tone;
@@ -174,6 +172,14 @@ function updateModeButtons() {
         ? 'Repeat: All'
         : 'Repeat: One';
   shuffleButton.textContent = state.player.shuffle ? 'Shuffle: On' : 'Shuffle: Off';
+}
+
+function updateBrowseTabs() {
+  browseTabs.forEach(tab => {
+    const isActive = tab.dataset.view === state.browseView;
+    tab.dataset.active = String(isActive);
+    tab.setAttribute('aria-pressed', String(isActive));
+  });
 }
 
 function updateNowPlaying() {
@@ -280,21 +286,13 @@ function renderQueue() {
     : 'The queue follows an explicit session order. Add tracks or toggle shuffle to change playback flow.';
 }
 
-function renderTrackList() {
+function renderTracksView() {
   trackList.innerHTML = '';
-  clearLibraryButton.hidden = state.tracks.length === 0;
 
   if (state.tracks.length === 0) {
-    emptyState.hidden = false;
     trackList.hidden = true;
-    updateSummary();
-    updateNowPlaying();
-    renderQueue();
     return;
   }
-
-  emptyState.hidden = true;
-  trackList.hidden = false;
 
   const fragment = document.createDocumentFragment();
 
@@ -331,6 +329,95 @@ function renderTrackList() {
   });
 
   trackList.append(fragment);
+  trackList.hidden = false;
+}
+
+function renderAlbumsView() {
+  albumList.innerHTML = '';
+
+  if (state.tracks.length === 0) {
+    albumList.hidden = true;
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  groupTracksByAlbum(state.tracks).forEach(album => {
+    const card = document.createElement('article');
+    card.className = 'browse-card';
+    card.innerHTML = `
+      <p class="summary-label">Album</p>
+      <strong>${album.title}</strong>
+      <p class="browse-meta">${album.artist}</p>
+      <p class="browse-meta">${album.trackCount} track${album.trackCount === 1 ? '' : 's'} | ${formatDuration(album.totalDuration)}</p>
+      <div class="browse-chip-list">
+        ${album.tracks
+          .slice(0, 4)
+          .map(track => `<button class="browse-chip" type="button" data-track-id="${track.id}">${track.trackNumber ?? '-'} ${track.title}</button>`)
+          .join('')}
+      </div>
+    `;
+    fragment.append(card);
+  });
+
+  albumList.append(fragment);
+  albumList.hidden = false;
+}
+
+function renderArtistsView() {
+  artistList.innerHTML = '';
+
+  if (state.tracks.length === 0) {
+    artistList.hidden = true;
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  groupTracksByArtist(state.tracks).forEach(artist => {
+    const card = document.createElement('article');
+    card.className = 'browse-card';
+    card.innerHTML = `
+      <p class="summary-label">Artist</p>
+      <strong>${artist.name}</strong>
+      <p class="browse-meta">${artist.albumCount} album${artist.albumCount === 1 ? '' : 's'} | ${artist.trackCount} track${artist.trackCount === 1 ? '' : 's'}</p>
+      <p class="browse-meta">${formatDuration(artist.totalDuration)}</p>
+    `;
+    fragment.append(card);
+  });
+
+  artistList.append(fragment);
+  artistList.hidden = false;
+}
+
+function renderLibraryBrowser() {
+  clearLibraryButton.hidden = state.tracks.length === 0;
+  updateBrowseTabs();
+
+  if (state.tracks.length === 0) {
+    emptyState.hidden = false;
+    trackList.hidden = true;
+    albumList.hidden = true;
+    artistList.hidden = true;
+    updateSummary();
+    updateNowPlaying();
+    renderQueue();
+    return;
+  }
+
+  emptyState.hidden = true;
+  trackList.hidden = state.browseView !== 'tracks';
+  albumList.hidden = state.browseView !== 'albums';
+  artistList.hidden = state.browseView !== 'artists';
+
+  if (state.browseView === 'tracks') {
+    renderTracksView();
+  } else if (state.browseView === 'albums') {
+    renderAlbumsView();
+  } else {
+    renderArtistsView();
+  }
+
   updateSummary();
   updateNowPlaying();
   renderQueue();
@@ -443,7 +530,7 @@ function setQueueTrack(trackId, options = {}) {
         console.warn('Playback start failed.', error);
         state.player.paused = true;
         updateNowPlaying();
-        renderTrackList();
+        renderLibraryBrowser();
       });
     } else {
       audioPlayer.pause();
@@ -455,7 +542,7 @@ function setQueueTrack(trackId, options = {}) {
   }
 
   updateNowPlaying();
-  renderTrackList();
+  renderLibraryBrowser();
   return true;
 }
 
@@ -485,7 +572,7 @@ function togglePlayback(trackId = state.player.currentTrackId) {
       .then(() => {
         state.player.paused = false;
         updateNowPlaying();
-        renderTrackList();
+        renderLibraryBrowser();
       })
       .catch(error => {
         console.warn('Playback resume failed.', error);
@@ -530,7 +617,7 @@ function queueTrackNext(trackId) {
     state.player.queueIndex = 0;
   }
 
-  renderTrackList();
+  renderLibraryBrowser();
   setStatus(`Queued "${track.title}" to play next.`, 'success');
 }
 
@@ -565,6 +652,11 @@ function toggleShuffleMode() {
   renderQueue();
 }
 
+function setBrowseView(view) {
+  state.browseView = view;
+  renderLibraryBrowser();
+}
+
 async function handleImport(fileList) {
   if (!fileList || fileList.length === 0 || state.importInFlight) {
     return;
@@ -596,9 +688,9 @@ async function handleImport(fileList) {
     }
 
     const saved = saveLibrary();
-    renderTrackList();
+    renderLibraryBrowser();
     setStatus(
-      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library metadata was saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback and queue behavior are available for the files imported in this session.`,
+      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library metadata was saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback, queue, and browsing behavior are available for the files imported in this session.`,
       'success'
     );
   } catch (error) {
@@ -624,6 +716,12 @@ function handleTrackListClick(event) {
   const queueButtonElement = event.target.closest('.track-queue-button');
   if (queueButtonElement) {
     queueTrackNext(queueButtonElement.dataset.trackId);
+    return;
+  }
+
+  const browseChip = event.target.closest('.browse-chip');
+  if (browseChip) {
+    togglePlayback(browseChip.dataset.trackId);
   }
 }
 
@@ -637,7 +735,8 @@ function handleClearLibrary() {
   state.player.currentTime = 0;
   state.player.repeatMode = 'off';
   state.player.shuffle = false;
-  renderTrackList();
+  state.browseView = 'tracks';
+  renderLibraryBrowser();
   setStatus('Cleared the locally stored library index for this browser.', 'warning');
 }
 
@@ -647,13 +746,13 @@ function registerPlayerEvents() {
   audioPlayer.addEventListener('play', () => {
     state.player.paused = false;
     updateNowPlaying();
-    renderTrackList();
+    renderLibraryBrowser();
   });
 
   audioPlayer.addEventListener('pause', () => {
     state.player.paused = true;
     updateNowPlaying();
-    renderTrackList();
+    renderLibraryBrowser();
   });
 
   audioPlayer.addEventListener('timeupdate', () => {
@@ -683,7 +782,7 @@ function registerPlayerEvents() {
     state.player.paused = true;
     state.player.currentTime = 0;
     updateNowPlaying();
-    renderTrackList();
+    renderLibraryBrowser();
   });
 }
 
@@ -703,6 +802,11 @@ fileInput?.addEventListener('change', event => handleImport(event.target.files))
 folderInput?.addEventListener('change', event => handleImport(event.target.files));
 clearLibraryButton?.addEventListener('click', handleClearLibrary);
 trackList?.addEventListener('click', handleTrackListClick);
+albumList?.addEventListener('click', handleTrackListClick);
+artistList?.addEventListener('click', handleTrackListClick);
+browseTabs.forEach(tab => {
+  tab.addEventListener('click', () => setBrowseView(tab.dataset.view));
+});
 playButton?.addEventListener('click', () => togglePlayback());
 previousButton?.addEventListener('click', () => stepQueue(-1));
 nextButton?.addEventListener('click', () => stepQueue(1));
@@ -734,10 +838,10 @@ if (loadStoredLibrary()) {
     state.player.queueIndex = 0;
   }
   setStatus(
-    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback and queue behavior.',
+    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback, queue, and browsing actions.',
     'success'
   );
 }
 
-renderTrackList();
+renderLibraryBrowser();
 registerServiceWorker();

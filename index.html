@@ -84,8 +84,20 @@
         <div class="panel-heading">
           <div>
             <p class="section-label">Library</p>
-            <h2>Imported tracks</h2>
+            <h2>Browse your collection</h2>
           </div>
+        </div>
+
+        <div class="browse-tabs" role="tablist" aria-label="Library views">
+          <button id="tracks-tab" class="button button-secondary browse-tab" type="button" data-view="tracks" aria-pressed="true">
+            Tracks
+          </button>
+          <button id="albums-tab" class="button button-secondary browse-tab" type="button" data-view="albums" aria-pressed="false">
+            Albums
+          </button>
+          <button id="artists-tab" class="button button-secondary browse-tab" type="button" data-view="artists" aria-pressed="false">
+            Artists
+          </button>
         </div>
 
         <div id="empty-state" class="empty-state">
@@ -97,6 +109,8 @@
         </div>
 
         <div id="track-list" class="track-list" hidden></div>
+        <div id="album-list" class="browse-grid" hidden></div>
+        <div id="artist-list" class="browse-grid" hidden></div>
       </section>
 
       <section class="panel player-panel">

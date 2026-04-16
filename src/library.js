@@ -369,6 +369,79 @@ function createShuffledQueue(queue, currentTrackId) {
   return currentTrackId ? [currentTrackId, ...remaining] : remaining;
 }
 
+function groupTracksByAlbum(tracks) {
+  const albumMap = new Map();
+
+  tracks.forEach(track => {
+    const key = `${track.artist}::${track.album}`;
+    if (!albumMap.has(key)) {
+      albumMap.set(key, {
+        key,
+        title: track.album,
+        artist: track.artist,
+        trackCount: 0,
+        totalDuration: 0,
+        tracks: []
+      });
+    }
+
+    const group = albumMap.get(key);
+    group.tracks.push(track);
+    group.trackCount += 1;
+    group.totalDuration += Number.isFinite(track.duration) ? track.duration : 0;
+  });
+
+  return [...albumMap.values()]
+    .map(group => ({
+      ...group,
+      tracks: [...group.tracks].sort((left, right) => {
+        const leftTrack = left.trackNumber ?? Number.MAX_SAFE_INTEGER;
+        const rightTrack = right.trackNumber ?? Number.MAX_SAFE_INTEGER;
+        if (leftTrack !== rightTrack) {
+          return leftTrack - rightTrack;
+        }
+        return left.title.localeCompare(right.title);
+      })
+    }))
+    .sort((left, right) => {
+      const artistCompare = left.artist.localeCompare(right.artist);
+      if (artistCompare !== 0) {
+        return artistCompare;
+      }
+      return left.title.localeCompare(right.title);
+    });
+}
+
+function groupTracksByArtist(tracks) {
+  const artistMap = new Map();
+
+  tracks.forEach(track => {
+    if (!artistMap.has(track.artist)) {
+      artistMap.set(track.artist, {
+        name: track.artist,
+        albumCount: 0,
+        trackCount: 0,
+        totalDuration: 0,
+        albums: new Set()
+      });
+    }
+
+    const group = artistMap.get(track.artist);
+    group.albums.add(track.album);
+    group.trackCount += 1;
+    group.totalDuration += Number.isFinite(track.duration) ? track.duration : 0;
+  });
+
+  return [...artistMap.values()]
+    .map(group => ({
+      name: group.name,
+      albumCount: group.albums.size,
+      trackCount: group.trackCount,
+      totalDuration: group.totalDuration
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
 function createLibrarySnapshot(tracks) {
   const sortedTracks = sortTracks(tracks);
   const importSummary = summarizeLibrary(sortedTracks);
@@ -460,6 +533,8 @@ export {
   getNextQueueIndex,
   getQueueIndex,
   getTrackIndexById,
+  groupTracksByAlbum,
+  groupTracksByArtist,
   insertAfterCurrent,
   isSupportedAudioFile,
   LIBRARY_STORAGE_KEY,

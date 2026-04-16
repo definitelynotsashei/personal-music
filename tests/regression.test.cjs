@@ -230,3 +230,38 @@ test('next queue index respects repeat mode', async () => {
   assert.equal(getNextQueueIndex(3, 2, 'all'), 0);
   assert.equal(getNextQueueIndex(3, 1, 'one'), 1);
 });
+
+test('album grouping collects tracks and durations by artist-album', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { groupTracksByAlbum } = await import(moduleUrl);
+
+  const groups = groupTracksByAlbum([
+    { id: 'a', title: 'Track 2', artist: 'Artist', album: 'Album', trackNumber: 2, duration: 120 },
+    { id: 'b', title: 'Track 1', artist: 'Artist', album: 'Album', trackNumber: 1, duration: 100 },
+    { id: 'c', title: 'Elsewhere', artist: 'Another', album: 'Other', trackNumber: 1, duration: 90 }
+  ]);
+
+  assert.equal(groups.length, 2);
+  assert.equal(groups[1].title, 'Album');
+  assert.equal(groups[1].trackCount, 2);
+  assert.equal(groups[1].totalDuration, 220);
+  assert.deepEqual(groups[1].tracks.map(track => track.title), ['Track 1', 'Track 2']);
+});
+
+test('artist grouping summarizes album and track counts', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { groupTracksByArtist } = await import(moduleUrl);
+
+  const groups = groupTracksByArtist([
+    { artist: 'Artist', album: 'One', duration: 100 },
+    { artist: 'Artist', album: 'Two', duration: 110 },
+    { artist: 'Artist', album: 'Two', duration: 120 },
+    { artist: 'Other', album: 'Elsewhere', duration: 90 }
+  ]);
+
+  assert.equal(groups.length, 2);
+  assert.equal(groups[0].name, 'Artist');
+  assert.equal(groups[0].albumCount, 2);
+  assert.equal(groups[0].trackCount, 3);
+  assert.equal(groups[0].totalDuration, 330);
+});

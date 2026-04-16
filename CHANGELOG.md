@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - Library Browsing Slice
+
+### Features
+- Added the first library-browsing slice with Tracks, Albums, and Artists views on top of the normalized library.
+
+### Documentation
+- Advanced the roadmap and project state from queue foundation into library browsing.
+
+### Tests
+- Expanded regression coverage for album and artist grouping helpers.
+
 ## 2026-04-16 - Cozy Lo-Fi UI Pass
 
 ### Features
