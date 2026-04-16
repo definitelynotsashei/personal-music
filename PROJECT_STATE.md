@@ -4,7 +4,7 @@ _Last updated 2026-04-15. For context-sharing, not a coding reference._
 ---
 
 ## In Progress
-Initial scaffold is in place. No product feature is currently marked as in progress.
+Building the first real product feature: desktop-first local audio import with normalized metadata extraction and a usable library track list.
 
 ---
 
@@ -15,16 +15,26 @@ A local-first personal music player intended for your own library, with a focus 
 ### Runtime snapshot
 - Runtime starts with a simple `index.html` + `app.js` + `styles.css` structure.
 - A minimal `service-worker.js` exists for future offline and cache work.
-- Tests currently cover project-baseline file presence.
+- Tests cover project-baseline file presence and core library-normalization helpers.
 
 ### Current product snapshot
-- Project goal: a personal music player similar in UX spirit to Spotify, but for your own library and personal use.
+- Product goal: a local-first personal music player for your own library, with clean playback, playlists, search, and a strong mobile-friendly now-playing experience.
+- Platform strategy: target both mobile and desktop, but start web-first and PWA-first.
+- Primary ingestion strategy: desktop file and folder import from a user-managed local library.
+- Metadata strategy: embedded file metadata is the primary source of truth for v1; full metadata editing is deferred.
 - Current v1 target: local library import, playback, queue, playlists, search, and mobile-friendly now-playing.
-- Explicit non-goals for v1: streaming backend, accounts, live sync, recommendations, social features.
-- The current UI is a placeholder shell rather than a real music workflow.
+- Explicit non-goals for v1: streaming backend, commercial catalog support, scraping, accounts, live sync, recommendations, and social features.
+- The current UI is moving from placeholder shell toward real library import and track browsing.
 
 ### Stronger v1 status
-- Not reached yet.
+- Defined, but not reached yet.
+
+### Stronger v1 milestone
+- Import your own local music on desktop into a normalized library index.
+- Browse tracks, albums, and artists with search that is good enough for daily use.
+- Start playback immediately and use dependable queue controls on both desktop and mobile browsers.
+- Use playlists, liked songs, and recently played without any account or cloud dependency.
+- Use a mobile-friendly now-playing view that still feels intentional on desktop.
 
 ---
 
@@ -68,7 +78,8 @@ const libraryState = {
   tracks,
   playlists,
   likedTrackIds,
-  recentTrackIds
+  recentTrackIds,
+  importSummary
 };
 ```
 
@@ -77,7 +88,10 @@ const libraryState = {
 - No sync.
 - No cloud library.
 - No streaming catalog.
+- Dedicated desktop wrapper is intentionally deferred.
 - Metadata import quality may vary.
+- Embedded metadata is primary, but fallback parsing is still required for incomplete files.
+- Full metadata editing is out of scope for the initial v1.
 - Final file and storage approach is still to be decided.
 
 ---

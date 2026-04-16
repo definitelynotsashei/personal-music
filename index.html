@@ -8,22 +8,86 @@
   </head>
   <body>
     <main class="app-shell">
-      <section class="hero">
-        <p class="eyebrow">Local-first music player</p>
-        <h1>Build your own library before you chase polish.</h1>
-        <p class="lede">
-          This starter shell marks the baseline for import, playback, queue, and
-          playlist work. Real library and player features are still to be built.
+      <section class="hero hero-grid">
+        <div>
+          <p class="eyebrow">Web-first local music player</p>
+          <h1>Import your own library and turn it into a usable track list.</h1>
+          <p class="lede">
+            This first feature batch focuses on the desktop import path: pick
+            audio files or a folder, extract embedded metadata when available,
+            normalize the results, and build a library view that is ready for
+            playback work.
+          </p>
+        </div>
+        <div class="hero-card">
+          <p class="hero-label">Current batch</p>
+          <strong>Library foundation</strong>
+          <span>Desktop-first import</span>
+          <span>Embedded metadata first</span>
+          <span>Streaming intentionally deferred</span>
+        </div>
+      </section>
+
+      <section class="panel import-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">Ingestion</p>
+            <h2>Import audio files</h2>
+          </div>
+          <p class="hint">
+            Folder import works best in Chromium-based browsers because it uses
+            the browser directory picker.
+          </p>
+        </div>
+
+        <div class="import-actions">
+          <label class="button button-primary">
+            <span>Import files</span>
+            <input id="file-input" type="file" accept="audio/*,.m4a,.flac,.aac,.ogg,.oga,.wav,.opus,.mp3" multiple />
+          </label>
+          <label class="button button-secondary">
+            <span>Import folder</span>
+            <input id="folder-input" type="file" accept="audio/*,.m4a,.flac,.aac,.ogg,.oga,.wav,.opus,.mp3" multiple webkitdirectory />
+          </label>
+        </div>
+
+        <div class="summary-grid">
+          <article class="summary-card">
+            <span class="summary-label">Tracks</span>
+            <strong id="track-count">0</strong>
+          </article>
+          <article class="summary-card">
+            <span class="summary-label">Artists</span>
+            <strong id="artist-count">0</strong>
+          </article>
+          <article class="summary-card">
+            <span class="summary-label">Albums</span>
+            <strong id="album-count">0</strong>
+          </article>
+        </div>
+
+        <p id="import-status" class="status">
+          No library imported yet. Start with a folder from your desktop music collection.
         </p>
       </section>
 
-      <section class="panel">
-        <h2>Next priorities</h2>
-        <ul>
-          <li>Import local audio files</li>
-          <li>Normalize essential track metadata</li>
-          <li>Render a usable track list</li>
-        </ul>
+      <section class="panel library-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">Library</p>
+            <h2>Imported tracks</h2>
+          </div>
+        </div>
+
+        <div id="empty-state" class="empty-state">
+          <h3>Your library is empty</h3>
+          <p>
+            Import files to build a normalized local index with title, artist,
+            album, and track ordering data.
+          </p>
+        </div>
+
+        <div id="track-list" class="track-list" hidden></div>
       </section>
     </main>
 

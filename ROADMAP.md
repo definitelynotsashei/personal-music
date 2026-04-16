@@ -5,15 +5,22 @@ This file is the durable handoff for future work sessions. Use it with
 
 ## Current State
 
-- Project is new.
-- No stable runtime or feature set is established yet.
+- Project is early, but the product direction is now fixed.
+- Build for both mobile and desktop, starting web-first and PWA-first.
 - Local-first personal use is the target.
 
 ## Decisions To Preserve
 
-- Build a local-first personal music player for your own library.
-- Do not treat streaming commercial catalogs as a project goal.
-- Prioritize playback, queue, playlists, and browsing before polish extras.
+- Build a local-first personal music player for your own library, with clean playback, playlists, search, and a strong mobile-friendly now-playing experience.
+- Target both mobile and desktop, but start web-first and PWA-first.
+- Optimize early UX for strong mobile playback while keeping desktop-friendly use in scope.
+- Use a user-managed local library as the long-term library model.
+- Desktop file and folder import is the main ingestion workflow.
+- The app should read music files, extract embedded metadata when available, and build its own normalized library index.
+- Treat embedded file metadata as the primary source of truth for v1.
+- Defer full metadata editing for v1, while leaving room for app-level metadata overrides later.
+- Do not treat streaming commercial catalogs, scraping, or cloud-hosted music as a project goal.
+- Prioritize library import, playback, queue, playlists, browsing, and search before polish extras.
 - Defer sync, accounts, recommendations, and cloud features unless real use proves they matter.
 - Keep docs/tests updated in the same batch as code changes.
 
@@ -25,13 +32,18 @@ This file is the durable handoff for future work sessions. Use it with
 
 This project reaches its first major finish line when:
 
-- Local library import is stable enough for real use.
-- Playback works reliably.
-- Queue and playlists are usable.
-- Search and browsing are good enough for daily use.
-- Mobile or narrow-screen now-playing use is acceptable.
-- The app has basic regression coverage and durable docs.
-- Remaining work is optional polish or future expansion, not missing core identity.
+- A desktop user can import a real folder or file selection from their local music library into a persistent normalized library index.
+- Imported tracks surface reliable title, artist, album, duration, and ordering data from embedded metadata when present, with sensible fallback parsing when metadata is incomplete.
+- Playback supports dependable play/pause, seek, next/previous, queue progression, and volume on mobile and desktop browsers.
+- Library browsing across tracks, albums, and artists is fast enough for daily use, and search is good enough to reach music quickly.
+- Playlists, liked songs, and recently played are usable for normal personal listening.
+- The now-playing experience works well on narrow mobile screens and does not feel like a desktop layout squeezed smaller.
+- PWA behavior is good enough that the app feels installable and resilient for personal local use.
+- Tests and docs are strong enough that future work is additive rather than a reset.
+
+## Concrete Stronger V1 Milestone
+
+Ship a web-first personal music player where you can import your own local music files on desktop, browse a normalized library, start playback immediately, manage a queue and basic playlists, search your collection, and use a mobile-friendly now-playing screen without needing any cloud account or streaming service.
 
 ## Working Priority Model
 
@@ -45,28 +57,30 @@ Use this order when continuing from the roadmap:
 ## Current Product Priority Order
 
 1. **Library foundation**
-   - Import local audio files.
-   - Normalize basic metadata.
-   - Render a usable track list.
+   - Import local audio files and folders from a user-managed library.
+   - Extract embedded metadata where available and normalize fallback metadata when it is not.
+   - Persist a normalized local library index.
+   - Render a usable track list for immediate playback.
 
 2. **Playback foundation**
    - Play/pause.
    - Next/previous.
    - Seek.
    - Volume.
-   - Queue.
+   - Queue progression.
 
 3. **Library navigation**
    - Browse by tracks.
    - Browse by albums.
    - Browse by artists.
+   - Make the core layout work cleanly across desktop and mobile.
 
 4. **Personal-use layer**
    - Liked songs.
    - Playlists.
    - Recently played.
 
-5. **Usability polish**
+  5. **Usability polish**
    - Search.
    - Keyboard shortcuts.
    - Mobile-friendly now-playing.
@@ -75,16 +89,19 @@ Use this order when continuing from the roadmap:
 ## Deferred By Choice
 
 - Streaming backend
+- Commercial streaming catalog support
+- Scraping music sources
 - Accounts
 - Live sync
-- Recommendations
+- Recommendation engine
 - Social features
 - Broad analytics
-- Cloud hosting by default
+- Dedicated desktop wrapper by default
+- Full metadata editing in v1
 
 ## Current Limitations To Keep In Mind
 
 - No sync yet.
 - No cloud library.
-- Metadata quality depends on imported files.
+- Metadata quality depends on imported files and fallback parsing quality.
 - Performance and storage constraints depend on how audio is handled.

@@ -1,9 +1,10 @@
-const CACHE_VERSION = 'music-player-v1';
+const CACHE_VERSION = 'music-player-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
   './app.js',
-  './styles.css'
+  './styles.css',
+  './src/library.js'
 ];
 
 self.addEventListener('install', event => {
