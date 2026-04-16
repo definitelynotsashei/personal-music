@@ -23,7 +23,7 @@ A local-first personal music player intended for your own library, with a focus 
 - The personal layer now includes persistent liked songs, playlists, and recently played history.
 - The first search slice now supports ranked library search across tracks, albums, artists, playlists, and liked music.
 - The PWA shell now has a manifest, install prompt handling, cached shell assets, and clearer offline/install messaging.
-- The current UI direction is a cozy late-night listening-den aesthetic with muted earthy tones, soft glass panels, hand-drawn iconography, a sticky bottom player bar, calm motion, and a mobile-expanded now-playing room.
+- The current UI direction is a cozy late-night listening-den aesthetic with muted earthy tones, soft glass panels, hand-drawn iconography, a sticky bottom player bar, calm motion, a mobile-expanded now-playing room, and a tabbed app shell that separates the main surfaces.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
 ### Current product snapshot
@@ -34,6 +34,7 @@ A local-first personal music player intended for your own library, with a focus 
 - Current v1 target: local library import, playback, queue, playlists, search, and mobile-friendly now-playing.
 - Explicit non-goals for v1: streaming backend, commercial catalog support, scraping, accounts, live sync, recommendations, and social features.
 - The current UI is moving toward a cozy, readable, low-stress player surface rather than a bright utility dashboard.
+- The main shell is now organized into Home, Library, Playlists, Now Playing, and Settings views to reduce main-page sprawl.
 
 ### Stronger v1 status
 - Defined, but not reached yet.

@@ -38,6 +38,8 @@ const trackList = document.querySelector('#track-list');
 const playlistList = document.querySelector('#playlist-list');
 const albumList = document.querySelector('#album-list');
 const artistList = document.querySelector('#artist-list');
+const appTabs = document.querySelectorAll('.app-tab');
+const appViews = document.querySelectorAll('.app-view');
 const browseTabs = document.querySelectorAll('.browse-tab');
 const searchInput = document.querySelector('#library-search-input');
 const clearSearchButton = document.querySelector('#clear-search-button');
@@ -106,11 +108,13 @@ const state = {
   selectedPlaylistId: null,
   importInFlight: false,
   lastSavedAt: null,
+  appSection: 'home',
   browseView: 'tracks',
   searchQuery: '',
   mobilePlayerOpen: false,
   compactPlayerMode: false,
   installPromptEvent: null,
+  lastNonPlayerSection: 'home',
   player: {
     currentTrackId: null,
     paused: true,
@@ -181,11 +185,16 @@ function updatePlayerShellMode() {
 }
 
 function openExpandedPlayer() {
-  if (!state.compactPlayerMode) {
-    return;
+  if (state.appSection !== 'now-playing') {
+    state.lastNonPlayerSection = state.appSection;
+    state.appSection = 'now-playing';
   }
 
-  state.mobilePlayerOpen = true;
+  if (state.compactPlayerMode) {
+    state.mobilePlayerOpen = true;
+  }
+
+  updateAppSections();
   updatePlayerShellMode();
 }
 
@@ -195,6 +204,35 @@ function closeExpandedPlayer() {
   }
 
   state.mobilePlayerOpen = false;
+  if (state.lastNonPlayerSection && state.lastNonPlayerSection !== 'now-playing') {
+    state.appSection = state.lastNonPlayerSection;
+    updateAppSections();
+  }
+  updatePlayerShellMode();
+}
+
+function updateAppSections() {
+  appTabs.forEach(tab => {
+    const isActive = tab.dataset.section === state.appSection;
+    tab.dataset.active = String(isActive);
+    tab.setAttribute('aria-pressed', String(isActive));
+  });
+
+  appViews.forEach(view => {
+    view.hidden = view.id !== `${state.appSection}-view`;
+  });
+}
+
+function setAppSection(section) {
+  state.appSection = section;
+  if (section === 'now-playing' && state.compactPlayerMode) {
+    state.mobilePlayerOpen = true;
+  } else if (section !== 'now-playing') {
+    state.lastNonPlayerSection = section;
+    state.mobilePlayerOpen = false;
+  }
+
+  updateAppSections();
   updatePlayerShellMode();
 }
 
@@ -365,8 +403,7 @@ function updateBrowseTabs() {
 function updatePlaylistControls() {
   ensureSelectedPlaylist();
   const showControls =
-    !state.searchQuery.trim() &&
-    (state.browseView === 'playlists' || state.tracks.length > 0);
+    state.appSection === 'playlists' && state.tracks.length > 0;
   playlistControls.hidden = !showControls;
 
   playlistSelect.innerHTML = '';
@@ -638,7 +675,13 @@ function renderPlaylistsView() {
   playlistList.innerHTML = '';
 
   if (state.playlists.length === 0) {
-    playlistList.hidden = true;
+    playlistList.hidden = false;
+    playlistList.innerHTML = `
+      <div class="empty-state">
+        <h3>No playlists yet</h3>
+        <p>Create a playlist here, then add tracks from your library results and track rows.</p>
+      </div>
+    `;
     return;
   }
 
@@ -858,11 +901,11 @@ function renderLibraryBrowser() {
   updateBrowseTabs();
   updatePlaylistControls();
   updateSearchControls();
+  renderPlaylistsView();
 
   if (state.tracks.length === 0 && state.playlists.length === 0) {
     emptyState.hidden = false;
     trackList.hidden = true;
-    playlistList.hidden = true;
     albumList.hidden = true;
     artistList.hidden = true;
     searchResults.hidden = true;
@@ -875,13 +918,11 @@ function renderLibraryBrowser() {
   emptyState.hidden = state.tracks.length > 0 || state.playlists.length > 0;
   const searchActive = Boolean(state.searchQuery.trim());
   trackList.hidden = !['tracks', 'liked', 'recent'].includes(state.browseView);
-  playlistList.hidden = state.browseView !== 'playlists';
   albumList.hidden = state.browseView !== 'albums';
   artistList.hidden = state.browseView !== 'artists';
 
   if (searchActive) {
     trackList.hidden = true;
-    playlistList.hidden = true;
     albumList.hidden = true;
     artistList.hidden = true;
     renderSearchResults();
@@ -899,8 +940,6 @@ function renderLibraryBrowser() {
     renderLikedView();
   } else if (state.browseView === 'recent') {
     renderRecentView();
-  } else if (state.browseView === 'playlists') {
-    renderPlaylistsView();
   } else if (state.browseView === 'albums') {
     renderAlbumsView();
   } else {
@@ -1449,6 +1488,9 @@ playlistList?.addEventListener('click', handleTrackListClick);
 albumList?.addEventListener('click', handleTrackListClick);
 artistList?.addEventListener('click', handleTrackListClick);
 searchResults?.addEventListener('click', handleTrackListClick);
+appTabs.forEach(tab => {
+  tab.addEventListener('click', () => setAppSection(tab.dataset.section));
+});
 browseTabs.forEach(tab => {
   tab.addEventListener('click', () => setBrowseView(tab.dataset.view));
 });
@@ -1511,6 +1553,7 @@ volumeInput?.addEventListener('input', event => {
 });
 
 registerPlayerEvents();
+updateAppSections();
 updatePlayerShellMode();
 updateConnectionStatus();
 updateInstallStatus();

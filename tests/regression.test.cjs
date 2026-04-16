@@ -37,6 +37,16 @@ test('mobile now-playing controls exist in the app shell', () => {
   assert.match(html, /id="close-expanded-player"/);
 });
 
+test('top-level app navigation tabs exist in the shell', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+  assert.match(html, /data-section="home"/);
+  assert.match(html, /data-section="library"/);
+  assert.match(html, /data-section="playlists"/);
+  assert.match(html, /data-section="now-playing"/);
+  assert.match(html, /data-section="settings"/);
+});
+
 test('pwa shell assets exist', () => {
   [
     'manifest.json',

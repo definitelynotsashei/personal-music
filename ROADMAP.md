@@ -122,7 +122,7 @@ Build the next durable file-access slice: improve local-library reopening so per
 
 - Cozy lo-fi study-session atmosphere.
 - Muted earthy palette with warm beige, soft brown, dusty pink, sage green, and faded blue.
-- Minimal layout with generous breathing room, gentle motion, and a sticky bottom player bar.
+- Minimal layout with generous breathing room, gentle motion, a sticky bottom player bar, and a tabbed app shell that separates home, library, playlists, now playing, and settings.
 - Functional playback-first UI with subtle texture, soft glass depth, hand-drawn iconography, and ambient den-like warmth rather than loud decoration.
 
 ## Working Priority Model

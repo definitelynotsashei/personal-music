@@ -121,6 +121,18 @@ body::before {
   padding: 3rem 0 4rem;
 }
 
+.app-nav {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.app-view {
+  display: grid;
+  gap: 1rem;
+}
+
 .panel,
 .hero-grid > div,
 .hero-card {
@@ -445,6 +457,11 @@ h3,
 .browse-tab[data-active='true'] {
   background: linear-gradient(180deg, rgba(152, 163, 143, 0.36), rgba(195, 161, 160, 0.24));
   border-color: rgba(109, 86, 72, 0.22);
+}
+
+.app-tab[data-active='true'] {
+  background: linear-gradient(180deg, rgba(195, 161, 160, 0.42), rgba(152, 163, 143, 0.22));
+  border-color: rgba(109, 86, 72, 0.24);
 }
 
 .like-button[data-active='true'],
@@ -1114,6 +1131,7 @@ audio {
   }
 
   .hero-grid,
+  .app-nav,
   .app-status-grid,
   .summary-grid,
   .search-controls,
@@ -1169,5 +1187,9 @@ audio {
 
   .track-actions {
     justify-content: flex-start;
+  }
+
+  .app-nav {
+    gap: 0.55rem;
   }
 }

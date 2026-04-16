@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - App Shell Navigation Slice
+
+### Features
+- Reorganized the main app into top-level Home, Library, Playlists, Now Playing, and Settings views so the player no longer depends on one bloated page surface.
+
+### Documentation
+- Documented the tabbed app-shell structure as part of the current UI and product organization approach.
+
+### Tests
+- Expanded regression coverage for top-level app navigation shell controls.
+
 ## 2026-04-16 - PWA And Offline Polish Slice
 
 ### Features
