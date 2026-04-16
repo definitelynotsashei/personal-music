@@ -296,6 +296,28 @@ function formatDuration(seconds) {
   return `${minutes}:${remainingSeconds}`;
 }
 
+function getTrackIndexById(tracks, trackId) {
+  return tracks.findIndex(track => track.id === trackId);
+}
+
+function getAdjacentTrackId(tracks, currentTrackId, offset) {
+  const currentIndex = getTrackIndexById(tracks, currentTrackId);
+  if (currentIndex < 0) {
+    return tracks[0]?.id ?? null;
+  }
+
+  const nextIndex = currentIndex + offset;
+  if (nextIndex < 0 || nextIndex >= tracks.length) {
+    return null;
+  }
+
+  return tracks[nextIndex].id;
+}
+
+function canPlayTrack(track) {
+  return Boolean(sanitizeText(track?.src));
+}
+
 function createLibrarySnapshot(tracks) {
   const sortedTracks = sortTracks(tracks);
   const importSummary = summarizeLibrary(sortedTracks);
@@ -377,9 +399,12 @@ function parseStoredLibrary(rawValue) {
 
 export {
   buildTrackFromFile,
+  canPlayTrack,
   createLibrarySnapshot,
   createTrackId,
   formatDuration,
+  getAdjacentTrackId,
+  getTrackIndexById,
   isSupportedAudioFile,
   LIBRARY_STORAGE_KEY,
   normalizeImportedTrack,

@@ -1,7 +1,10 @@
 import {
   buildTrackFromFile,
+  canPlayTrack,
   createLibrarySnapshot,
   formatDuration,
+  getAdjacentTrackId,
+  getTrackIndexById,
   isSupportedAudioFile,
   LIBRARY_STORAGE_KEY,
   parseStoredLibrary,
@@ -19,10 +22,28 @@ const albumCount = document.querySelector('#album-count');
 const emptyState = document.querySelector('#empty-state');
 const trackList = document.querySelector('#track-list');
 const clearLibraryButton = document.querySelector('#clear-library');
+const audioPlayer = document.querySelector('#audio-player');
+const nowPlayingTitle = document.querySelector('#now-playing-title');
+const nowPlayingMeta = document.querySelector('#now-playing-meta');
+const playerNote = document.querySelector('#player-note');
+const playButton = document.querySelector('#play-button');
+const previousButton = document.querySelector('#previous-button');
+const nextButton = document.querySelector('#next-button');
+const seekInput = document.querySelector('#seek-input');
+const volumeInput = document.querySelector('#volume-input');
+const currentTime = document.querySelector('#current-time');
+const durationTime = document.querySelector('#duration-time');
+
 const state = {
   tracks: [],
   importInFlight: false,
-  lastSavedAt: null
+  lastSavedAt: null,
+  player: {
+    currentTrackId: null,
+    paused: true,
+    currentTime: 0,
+    volume: Number(volumeInput?.value || 0.8)
+  }
 };
 
 function canUseLocalStorage() {
@@ -31,6 +52,14 @@ function canUseLocalStorage() {
   } catch {
     return false;
   }
+}
+
+function revokeTrackSources(tracks) {
+  tracks.forEach(track => {
+    if (track?.src && track.src.startsWith('blob:')) {
+      URL.revokeObjectURL(track.src);
+    }
+  });
 }
 
 function saveLibrary() {
@@ -58,12 +87,17 @@ function loadStoredLibrary() {
 }
 
 function clearStoredLibrary() {
+  revokeTrackSources(state.tracks);
   state.tracks = [];
   state.lastSavedAt = null;
 
   if (canUseLocalStorage()) {
     window.localStorage.removeItem(LIBRARY_STORAGE_KEY);
   }
+}
+
+function getCurrentTrack() {
+  return state.tracks.find(track => track.id === state.player.currentTrackId) ?? null;
 }
 
 function setStatus(message, tone = 'normal') {
@@ -78,6 +112,60 @@ function updateSummary() {
   albumCount.textContent = String(summary.albumCount);
 }
 
+function syncTransportButtons() {
+  const currentTrack = getCurrentTrack();
+  const hasTracks = state.tracks.length > 0;
+  const hasPlayableTrack = currentTrack ? canPlayTrack(currentTrack) : false;
+  const currentIndex = currentTrack
+    ? getTrackIndexById(state.tracks, currentTrack.id)
+    : -1;
+
+  playButton.disabled = !hasPlayableTrack;
+  previousButton.disabled = !hasPlayableTrack || currentIndex <= 0;
+  nextButton.disabled = !hasPlayableTrack || currentIndex < 0 || currentIndex >= state.tracks.length - 1;
+  seekInput.disabled = !hasPlayableTrack;
+  volumeInput.disabled = !hasTracks;
+}
+
+function updateNowPlaying() {
+  const currentTrack = getCurrentTrack();
+
+  if (!currentTrack) {
+    nowPlayingTitle.textContent = 'Nothing playing';
+    nowPlayingMeta.textContent = 'Import local files to start playback.';
+    playerNote.textContent =
+      'Import tracks in this session to enable playback. Persisted metadata alone is not yet enough to reopen the underlying files after reload.';
+    playButton.textContent = 'Play';
+    currentTime.textContent = '0:00';
+    durationTime.textContent = '--:--';
+    seekInput.max = '0';
+    seekInput.value = '0';
+    syncTransportButtons();
+    return;
+  }
+
+  nowPlayingTitle.textContent = currentTrack.title;
+  nowPlayingMeta.textContent = `${currentTrack.artist} | ${currentTrack.album}`;
+  playButton.textContent = state.player.paused ? 'Play' : 'Pause';
+  currentTime.textContent = formatDuration(state.player.currentTime);
+  durationTime.textContent = formatDuration(
+    Number.isFinite(audioPlayer.duration) ? audioPlayer.duration : currentTrack.duration
+  );
+  seekInput.max = String(
+    Math.max(0, Math.floor(Number.isFinite(audioPlayer.duration) ? audioPlayer.duration : currentTrack.duration || 0))
+  );
+  seekInput.value = String(Math.min(Number(seekInput.max), Math.floor(state.player.currentTime)));
+
+  if (canPlayTrack(currentTrack)) {
+    playerNote.textContent = 'Playback is available for tracks imported in the current browser session.';
+  } else {
+    playerNote.textContent =
+      'This track was restored from the saved library index, but playback needs the original files to be imported again in this session.';
+  }
+
+  syncTransportButtons();
+}
+
 function renderTrackList() {
   trackList.innerHTML = '';
   clearLibraryButton.hidden = state.tracks.length === 0;
@@ -86,6 +174,7 @@ function renderTrackList() {
     emptyState.hidden = false;
     trackList.hidden = true;
     updateSummary();
+    updateNowPlaying();
     return;
   }
 
@@ -96,12 +185,24 @@ function renderTrackList() {
 
   state.tracks.forEach(track => {
     const article = document.createElement('article');
+    const isCurrent = track.id === state.player.currentTrackId;
     article.className = 'track-row';
+    if (isCurrent) {
+      article.dataset.current = 'true';
+    }
+
+    const actionLabel = isCurrent && !state.player.paused ? 'Pause' : 'Play';
+    const playbackDisabled = canPlayTrack(track) ? '' : 'disabled';
     article.innerHTML = `
       <div class="track-index">${track.trackNumber ?? '-'}</div>
       <div class="track-main">
         <strong>${track.title}</strong>
         <p>${track.artist} | ${track.album}</p>
+      </div>
+      <div class="track-actions">
+        <button class="track-play-button button button-secondary" type="button" data-track-id="${track.id}" ${playbackDisabled}>
+          ${actionLabel}
+        </button>
       </div>
       <div class="track-meta">
         <span>${formatDuration(track.duration)}</span>
@@ -113,28 +214,38 @@ function renderTrackList() {
 
   trackList.append(fragment);
   updateSummary();
+  updateNowPlaying();
 }
 
 function mergeTracks(importedTracks) {
-  const nextById = new Map(state.tracks.map(track => [track.id, track]));
-  importedTracks.forEach(track => {
+  const previousById = new Map(state.tracks.map(track => [track.id, track]));
+  const nextById = new Map();
+
+  state.tracks.forEach(track => {
     nextById.set(track.id, track);
   });
+
+  importedTracks.forEach(track => {
+    const previousTrack = previousById.get(track.id);
+    if (previousTrack?.src && previousTrack.src !== track.src && previousTrack.src.startsWith('blob:')) {
+      URL.revokeObjectURL(previousTrack.src);
+    }
+    nextById.set(track.id, track);
+  });
+
   state.tracks = sortTracks([...nextById.values()]);
 }
 
-function loadTrackDuration(file) {
+function loadTrackDurationFromUrl(url) {
   return new Promise(resolve => {
     const audio = document.createElement('audio');
-    const objectUrl = URL.createObjectURL(file);
     const cleanup = () => {
       audio.removeAttribute('src');
       audio.load();
-      URL.revokeObjectURL(objectUrl);
     };
 
     audio.preload = 'metadata';
-    audio.src = objectUrl;
+    audio.src = url;
     audio.addEventListener(
       'loadedmetadata',
       () => {
@@ -161,11 +272,101 @@ async function normalizeFiles(fileList) {
 
   for (const file of files) {
     const track = await buildTrackFromFile(file);
-    track.duration = await loadTrackDuration(file);
+    track.src = URL.createObjectURL(file);
+    track.duration = await loadTrackDurationFromUrl(track.src);
     tracks.push(track);
   }
 
   return tracks;
+}
+
+function selectTrack(trackId, options = {}) {
+  const track = state.tracks.find(entry => entry.id === trackId);
+  if (!track) {
+    return false;
+  }
+
+  state.player.currentTrackId = track.id;
+  state.player.currentTime = 0;
+  state.player.paused = options.autoplay ? false : true;
+
+  if (canPlayTrack(track)) {
+    audioPlayer.src = track.src;
+    audioPlayer.currentTime = 0;
+    audioPlayer.volume = state.player.volume;
+
+    if (options.autoplay) {
+      audioPlayer
+        .play()
+        .catch(error => {
+          console.warn('Playback start failed.', error);
+          state.player.paused = true;
+          updateNowPlaying();
+          renderTrackList();
+        });
+    } else {
+      audioPlayer.pause();
+    }
+  } else {
+    audioPlayer.pause();
+    audioPlayer.removeAttribute('src');
+    audioPlayer.load();
+  }
+
+  updateNowPlaying();
+  renderTrackList();
+  return true;
+}
+
+function togglePlayback(trackId = state.player.currentTrackId) {
+  const targetTrack = state.tracks.find(track => track.id === trackId);
+  if (!targetTrack) {
+    return;
+  }
+
+  if (!canPlayTrack(targetTrack)) {
+    setStatus(
+      'This track was restored from saved metadata. Re-import the source files in this session to enable playback.',
+      'warning'
+    );
+    updateNowPlaying();
+    return;
+  }
+
+  if (state.player.currentTrackId !== targetTrack.id) {
+    selectTrack(targetTrack.id, { autoplay: true });
+    return;
+  }
+
+  if (state.player.paused) {
+    audioPlayer
+      .play()
+      .then(() => {
+        state.player.paused = false;
+        updateNowPlaying();
+        renderTrackList();
+      })
+      .catch(error => {
+        console.warn('Playback resume failed.', error);
+      });
+    return;
+  }
+
+  audioPlayer.pause();
+}
+
+function stepTrack(offset) {
+  const nextTrackId = getAdjacentTrackId(
+    state.tracks,
+    state.player.currentTrackId,
+    offset
+  );
+
+  if (!nextTrackId) {
+    return;
+  }
+
+  selectTrack(nextTrackId, { autoplay: true });
 }
 
 async function handleImport(fileList) {
@@ -187,10 +388,20 @@ async function handleImport(fileList) {
   try {
     const tracks = await normalizeFiles(supportedFiles);
     mergeTracks(tracks);
+    const currentTrackStillExists = state.player.currentTrackId
+      ? state.tracks.some(track => track.id === state.player.currentTrackId)
+      : false;
+
+    if (!currentTrackStillExists) {
+      state.player.currentTrackId = tracks[0]?.id ?? null;
+      state.player.paused = true;
+      state.player.currentTime = 0;
+    }
+
     const saved = saveLibrary();
     renderTrackList();
     setStatus(
-      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library was saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Embedded metadata was used when available, with filename fallback for missing fields.`,
+      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library metadata was saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback is available for the files imported in this session.`,
       'success'
     );
   } catch (error) {
@@ -206,10 +417,70 @@ async function handleImport(fileList) {
   }
 }
 
+function handleTrackListClick(event) {
+  const playButtonElement = event.target.closest('.track-play-button');
+  if (!playButtonElement) {
+    return;
+  }
+
+  togglePlayback(playButtonElement.dataset.trackId);
+}
+
 function handleClearLibrary() {
+  audioPlayer.pause();
+  audioPlayer.removeAttribute('src');
+  audioPlayer.load();
   clearStoredLibrary();
+  state.player.currentTrackId = null;
+  state.player.paused = true;
+  state.player.currentTime = 0;
   renderTrackList();
   setStatus('Cleared the locally stored library index for this browser.', 'warning');
+}
+
+function registerPlayerEvents() {
+  audioPlayer.volume = state.player.volume;
+
+  audioPlayer.addEventListener('play', () => {
+    state.player.paused = false;
+    updateNowPlaying();
+    renderTrackList();
+  });
+
+  audioPlayer.addEventListener('pause', () => {
+    state.player.paused = true;
+    updateNowPlaying();
+    renderTrackList();
+  });
+
+  audioPlayer.addEventListener('timeupdate', () => {
+    state.player.currentTime = Number.isFinite(audioPlayer.currentTime)
+      ? audioPlayer.currentTime
+      : 0;
+    updateNowPlaying();
+  });
+
+  audioPlayer.addEventListener('loadedmetadata', () => {
+    updateNowPlaying();
+  });
+
+  audioPlayer.addEventListener('ended', () => {
+    const nextTrackId = getAdjacentTrackId(
+      state.tracks,
+      state.player.currentTrackId,
+      1
+    );
+
+    if (nextTrackId) {
+      selectTrack(nextTrackId, { autoplay: true });
+      return;
+    }
+
+    state.player.paused = true;
+    state.player.currentTime = 0;
+    updateNowPlaying();
+    renderTrackList();
+  });
 }
 
 async function registerServiceWorker() {
@@ -227,9 +498,37 @@ async function registerServiceWorker() {
 fileInput?.addEventListener('change', event => handleImport(event.target.files));
 folderInput?.addEventListener('change', event => handleImport(event.target.files));
 clearLibraryButton?.addEventListener('click', handleClearLibrary);
+trackList?.addEventListener('click', handleTrackListClick);
+playButton?.addEventListener('click', () => togglePlayback());
+previousButton?.addEventListener('click', () => stepTrack(-1));
+nextButton?.addEventListener('click', () => stepTrack(1));
+seekInput?.addEventListener('input', event => {
+  if (!audioPlayer.src) {
+    return;
+  }
+
+  const nextTime = Number(event.target.value);
+  audioPlayer.currentTime = nextTime;
+  state.player.currentTime = nextTime;
+  updateNowPlaying();
+});
+volumeInput?.addEventListener('input', event => {
+  const volume = Number(event.target.value);
+  state.player.volume = volume;
+  audioPlayer.volume = volume;
+  syncTransportButtons();
+});
+
+registerPlayerEvents();
 
 if (loadStoredLibrary()) {
-  setStatus('Loaded the locally saved library index for this browser.', 'success');
+  if (state.tracks.length > 0) {
+    state.player.currentTrackId = state.tracks[0].id;
+  }
+  setStatus(
+    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback.',
+    'success'
+  );
 }
 
 renderTrackList();

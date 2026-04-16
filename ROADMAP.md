@@ -27,6 +27,7 @@ This file is the durable handoff for future work sessions. Use it with
 ## Completed Milestones
 
 - Initial project scaffold and documentation baseline.
+- Library foundation baseline: import local files, normalize metadata, persist the library index, and render a usable track list.
 
 ## Stronger V1 Goal
 
@@ -105,6 +106,10 @@ Deliver a durable local library foundation: import desktop music files into a pe
 ### Very First Implementation Task
 
 Build local file import plus normalized track-library rendering, then make that library model persist locally so later playback, queue, and browsing work builds on a stable base.
+
+### Current Recommended Task
+
+Build the first playback slice: real current-track state plus play/pause, previous/next, seek, and volume for tracks imported in the current browser session.
 
 ## Working Priority Model
 

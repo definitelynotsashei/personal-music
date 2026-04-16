@@ -169,3 +169,28 @@ test('stored library parsing hydrates valid snapshots and rejects invalid ones',
   assert.equal(invalid.tracks.length, 0);
   assert.equal(invalid.importSummary.trackCount, 0);
 });
+
+test('adjacent track lookup follows library order bounds', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { getAdjacentTrackId } = await import(moduleUrl);
+
+  const tracks = [
+    { id: 'track-1' },
+    { id: 'track-2' },
+    { id: 'track-3' }
+  ];
+
+  assert.equal(getAdjacentTrackId(tracks, 'track-2', -1), 'track-1');
+  assert.equal(getAdjacentTrackId(tracks, 'track-2', 1), 'track-3');
+  assert.equal(getAdjacentTrackId(tracks, 'track-1', -1), null);
+  assert.equal(getAdjacentTrackId(tracks, 'missing', 1), 'track-1');
+});
+
+test('playability depends on a session playback source', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { canPlayTrack } = await import(moduleUrl);
+
+  assert.equal(canPlayTrack({ src: 'blob:session-audio' }), true);
+  assert.equal(canPlayTrack({ src: '' }), false);
+  assert.equal(canPlayTrack(null), false);
+});

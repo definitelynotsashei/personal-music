@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'music-player-v3';
+const CACHE_VERSION = 'music-player-v4';
 const CORE_ASSETS = [
   './',
   './index.html',

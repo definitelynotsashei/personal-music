@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - Playback Foundation Slice
+
+### Features
+- Added the first playback foundation slice with current-track state, transport controls, seek, and volume for tracks imported in the current browser session.
+
+### Documentation
+- Advanced the roadmap and project state from library foundation into playback foundation.
+
+### Tests
+- Expanded regression coverage for playback-related helper behavior.
+
 ## 2026-04-16 - Stronger V1 Plan And Persistent Library Model
 
 ### Features

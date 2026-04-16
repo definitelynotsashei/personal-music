@@ -92,6 +92,59 @@
 
         <div id="track-list" class="track-list" hidden></div>
       </section>
+
+      <section class="panel player-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="section-label">Now Playing</p>
+            <h2>Playback foundation</h2>
+          </div>
+          <p id="player-note" class="hint">
+            Import tracks in this session to enable playback. Persisted metadata alone is not yet enough to reopen the underlying files after reload.
+          </p>
+        </div>
+
+        <div class="player-shell">
+          <div class="now-playing-card">
+            <p class="summary-label">Current track</p>
+            <strong id="now-playing-title">Nothing playing</strong>
+            <p id="now-playing-meta" class="track-player-meta">
+              Import local files to start playback.
+            </p>
+          </div>
+
+          <div class="player-controls">
+            <div class="transport-row">
+              <button id="previous-button" class="button button-secondary" type="button">
+                Previous
+              </button>
+              <button id="play-button" class="button button-primary" type="button">
+                Play
+              </button>
+              <button id="next-button" class="button button-secondary" type="button">
+                Next
+              </button>
+            </div>
+
+            <label class="range-group">
+              <span>Seek</span>
+              <input id="seek-input" type="range" min="0" max="0" step="1" value="0" />
+            </label>
+
+            <div class="player-stats">
+              <span id="current-time">0:00</span>
+              <span id="duration-time">--:--</span>
+            </div>
+
+            <label class="range-group volume-group">
+              <span>Volume</span>
+              <input id="volume-input" type="range" min="0" max="1" step="0.01" value="0.8" />
+            </label>
+          </div>
+        </div>
+
+        <audio id="audio-player" preload="metadata"></audio>
+      </section>
     </main>
 
     <script type="module" src="app.js"></script>
