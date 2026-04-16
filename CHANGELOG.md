@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-04-16 - Cozy Lo-Fi UI Pass
+
+### Features
+- Restyled the player interface with a cozy lo-fi visual direction, centered album artwork, softer controls, ambient overlays, and calmer motion while keeping the current functionality intact.
+
+### Documentation
+- Documented the established UI direction in the roadmap and project state.
+
 ## 2026-04-16 - Queue Foundation Slice
 
 ### Features

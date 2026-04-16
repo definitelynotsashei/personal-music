@@ -19,6 +19,7 @@ A local-first personal music player intended for your own library, with a focus 
 - Library data is persisted locally in browser storage so reloads keep the current imported library model.
 - Playback works for tracks imported in the current browser session, with session-local file access as the current source model.
 - Queue behavior is being added so playback can follow an explicit ordered list instead of only the library sort order.
+- The current UI direction is a cozy lo-fi study aesthetic with muted earthy tones, subtle texture, soft shadows, and calm motion.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
 ### Current product snapshot
@@ -28,7 +29,7 @@ A local-first personal music player intended for your own library, with a focus 
 - Metadata strategy: embedded file metadata is the primary source of truth for v1; full metadata editing is deferred.
 - Current v1 target: local library import, playback, queue, playlists, search, and mobile-friendly now-playing.
 - Explicit non-goals for v1: streaming backend, commercial catalog support, scraping, accounts, live sync, recommendations, and social features.
-- The current UI is moving from placeholder shell toward real library import and track browsing.
+- The current UI is moving toward a cozy, readable, low-stress player surface rather than a bright utility dashboard.
 
 ### Stronger v1 status
 - Defined, but not reached yet.

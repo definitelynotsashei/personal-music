@@ -14,6 +14,7 @@ This file is the durable handoff for future work sessions. Use it with
 - Build a local-first personal music player for your own library, with clean playback, playlists, search, and a strong mobile-friendly now-playing experience.
 - Target both mobile and desktop, but start web-first and PWA-first.
 - Optimize early UX for strong mobile playback while keeping desktop-friendly use in scope.
+- Keep the visual direction calm, warm, and uncluttered rather than glossy or high-energy.
 - Use a user-managed local library as the long-term library model.
 - Desktop file and folder import is the main ingestion workflow.
 - The app should read music files, extract embedded metadata when available, and build its own normalized library index.
@@ -111,6 +112,13 @@ Build local file import plus normalized track-library rendering, then make that 
 ### Current Recommended Task
 
 Build the first queue slice: explicit queue state, queue order, queue index, and basic repeat and shuffle decisions on top of the current playback foundation.
+
+### Current UI Direction
+
+- Cozy lo-fi study-session atmosphere.
+- Muted earthy palette with warm beige, soft brown, dusty pink, sage green, and faded blue.
+- Minimal layout with generous breathing room and gentle motion.
+- Functional playback-first UI with subtle texture and ambient depth rather than loud decoration.
 
 ## Working Priority Model
 

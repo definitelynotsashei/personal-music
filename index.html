@@ -7,24 +7,30 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="ambient-backdrop" aria-hidden="true">
+      <div class="ambient-glow ambient-glow-left"></div>
+      <div class="ambient-glow ambient-glow-right"></div>
+      <div class="rain-layer"></div>
+      <div class="grain-layer"></div>
+    </div>
+
     <main class="app-shell">
       <section class="hero hero-grid">
         <div>
-          <p class="eyebrow">Web-first local music player</p>
-          <h1>Import your own library and turn it into a usable track list.</h1>
+          <p class="eyebrow">Late-night library player</p>
+          <h1>Keep your music close, warm, and easy to live with.</h1>
           <p class="lede">
-            This first feature batch focuses on the desktop import path: pick
-            audio files or a folder, extract embedded metadata when available,
-            normalize the results, and build a library view that is ready for
-            playback work.
+            A cozy lo-fi interface for your personal library: quiet colors,
+            soft edges, and enough breathing space to make long listening
+            sessions feel calm instead of crowded.
           </p>
         </div>
         <div class="hero-card">
-          <p class="hero-label">Current batch</p>
-          <strong>Library foundation</strong>
-          <span>Desktop-first import</span>
-          <span>Embedded metadata first</span>
-          <span>Streaming intentionally deferred</span>
+          <p class="hero-label">Mood</p>
+          <strong>Rainy-night focus</strong>
+          <span>Muted color, soft contrast</span>
+          <span>Playback-first and uncluttered</span>
+          <span>Personal library only</span>
         </div>
       </section>
 
@@ -107,6 +113,9 @@
         <div class="player-shell">
           <div class="now-playing-card">
             <p class="summary-label">Current track</p>
+            <div id="album-art" class="album-art" aria-hidden="true">
+              <span id="album-art-mark">LP</span>
+            </div>
             <strong id="now-playing-title">Nothing playing</strong>
             <p id="now-playing-meta" class="track-player-meta">
               Import local files to start playback.

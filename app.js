@@ -28,6 +28,8 @@ const clearLibraryButton = document.querySelector('#clear-library');
 const audioPlayer = document.querySelector('#audio-player');
 const nowPlayingTitle = document.querySelector('#now-playing-title');
 const nowPlayingMeta = document.querySelector('#now-playing-meta');
+const albumArt = document.querySelector('#album-art');
+const albumArtMark = document.querySelector('#album-art-mark');
 const playerNote = document.querySelector('#player-note');
 const playButton = document.querySelector('#play-button');
 const previousButton = document.querySelector('#previous-button');
@@ -180,6 +182,8 @@ function updateNowPlaying() {
   if (!currentTrack) {
     nowPlayingTitle.textContent = 'Nothing playing';
     nowPlayingMeta.textContent = 'Import local files to start playback.';
+    albumArt.dataset.state = 'idle';
+    albumArtMark.textContent = 'LP';
     playerNote.textContent =
       'Import tracks in this session to enable playback. Persisted metadata alone is not yet enough to reopen the underlying files after reload.';
     playButton.textContent = 'Play';
@@ -194,6 +198,13 @@ function updateNowPlaying() {
 
   nowPlayingTitle.textContent = currentTrack.title;
   nowPlayingMeta.textContent = `${currentTrack.artist} | ${currentTrack.album}`;
+  albumArt.dataset.state = state.player.paused ? 'paused' : 'playing';
+  albumArtMark.textContent = currentTrack.title
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(word => word[0]?.toUpperCase() || '')
+    .join('') || 'LP';
   playButton.textContent = state.player.paused ? 'Play' : 'Pause';
   currentTime.textContent = formatDuration(state.player.currentTime);
   durationTime.textContent = formatDuration(
