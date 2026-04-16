@@ -137,15 +137,16 @@ test('library snapshots store normalized tracks and summary metadata', async () 
       createdAt: '2026-04-16T00:00:00.000Z',
       updatedAt: '2026-04-16T00:00:00.000Z'
     }
-  ]);
+  ], ['track-1']);
 
-  assert.equal(snapshot.version, 3);
+  assert.equal(snapshot.version, 4);
   assert.equal(snapshot.importSummary.trackCount, 1);
   assert.equal(snapshot.importSummary.artistCount, 1);
   assert.equal(snapshot.tracks[0].title, 'Feather');
   assert.deepEqual(snapshot.likedTrackIds, ['track-1']);
   assert.equal(snapshot.playlists.length, 1);
   assert.deepEqual(snapshot.playlists[0].trackIds, ['track-1']);
+  assert.deepEqual(snapshot.recentTrackIds, ['track-1']);
   assert.equal(typeof snapshot.savedAt, 'string');
 });
 
@@ -183,6 +184,18 @@ test('stored library parsing hydrates valid snapshots and rejects invalid ones',
   assert.deepEqual(invalid.likedTrackIds, []);
 });
 
+test('recent track normalization removes duplicates and invalid ids', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { normalizeRecentTrackIds } = await import(moduleUrl);
+
+  const recentIds = normalizeRecentTrackIds(
+    ['track-2', 'track-1', 'track-2', 'missing'],
+    [{ id: 'track-1' }, { id: 'track-2' }]
+  );
+
+  assert.deepEqual(recentIds, ['track-2', 'track-1']);
+});
+
 test('playlist normalization removes invalid tracks and empty names', async () => {
   const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
   const { normalizePlaylists } = await import(moduleUrl);
@@ -216,9 +229,10 @@ test('stored library parsing hydrates playlists from current snapshots', async (
   const { parseStoredLibrary } = await import(moduleUrl);
 
   const parsed = parseStoredLibrary(JSON.stringify({
-    version: 3,
+    version: 4,
     savedAt: '2026-04-16T00:00:00.000Z',
     likedTrackIds: ['track-1'],
+    recentTrackIds: ['track-1', 'missing'],
     playlists: [
       {
         id: 'playlist:focus:1',
@@ -248,6 +262,7 @@ test('stored library parsing hydrates playlists from current snapshots', async (
   assert.equal(parsed.playlists[0].name, 'Focus');
   assert.deepEqual(parsed.playlists[0].trackIds, ['track-1']);
   assert.deepEqual(parsed.likedTrackIds, ['track-1']);
+  assert.deepEqual(parsed.recentTrackIds, ['track-1']);
 });
 
 test('adjacent track lookup follows library order bounds', async () => {

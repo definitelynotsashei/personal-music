@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - Recently Played Slice
+
+### Features
+- Added persistent recently played history with a dedicated recent-library view driven by playback activity.
+
+### Documentation
+- Advanced the roadmap and project state from playlists to the first search slice.
+
+### Tests
+- Expanded regression coverage for recent-history normalization and storage hydration.
+
 ## 2026-04-16 - Playlists Slice
 
 ### Features

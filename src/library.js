@@ -9,7 +9,8 @@ const SUPPORTED_AUDIO_EXTENSIONS = new Set([
   'opus'
 ]);
 
-const LIBRARY_STORAGE_KEY = 'personal-music-player.library.v3';
+const LIBRARY_STORAGE_KEY = 'personal-music-player.library.v4';
+const MAX_RECENT_TRACKS = 24;
 
 function getFileExtension(filename = '') {
   const normalized = String(filename).toLowerCase();
@@ -374,6 +375,14 @@ function normalizeLikedTrackIds(likedTrackIds, tracks) {
   return [...new Set((likedTrackIds || []).filter(id => validIds.has(id)))];
 }
 
+function normalizeRecentTrackIds(recentTrackIds, tracks) {
+  const validIds = new Set(tracks.map(track => track.id));
+  return [...new Set((recentTrackIds || []).filter(id => validIds.has(id)))].slice(
+    0,
+    MAX_RECENT_TRACKS
+  );
+}
+
 function createPlaylistId(name) {
   const slug = sanitizeText(name)
     .toLowerCase()
@@ -470,18 +479,25 @@ function groupTracksByArtist(tracks) {
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function createLibrarySnapshot(tracks, likedTrackIds = [], playlists = []) {
+function createLibrarySnapshot(
+  tracks,
+  likedTrackIds = [],
+  playlists = [],
+  recentTrackIds = []
+) {
   const sortedTracks = sortTracks(tracks);
   const importSummary = summarizeLibrary(sortedTracks);
   const normalizedLikes = normalizeLikedTrackIds(likedTrackIds, sortedTracks);
   const normalizedPlaylists = normalizePlaylists(playlists, sortedTracks);
+  const normalizedRecents = normalizeRecentTrackIds(recentTrackIds, sortedTracks);
 
   return {
-    version: 3,
+    version: 4,
     savedAt: new Date().toISOString(),
     importSummary,
     likedTrackIds: normalizedLikes,
     playlists: normalizedPlaylists,
+    recentTrackIds: normalizedRecents,
     tracks: sortedTracks.map(track => ({
       id: sanitizeText(track.id),
       title: sanitizeText(track.title) || 'Unknown Track',
@@ -507,6 +523,7 @@ function parseStoredLibrary(rawValue) {
       importSummary: summarizeLibrary([]),
       likedTrackIds: [],
       playlists: [],
+      recentTrackIds: [],
       savedAt: null
     };
   }
@@ -520,13 +537,14 @@ function parseStoredLibrary(rawValue) {
       importSummary: summarizeLibrary([]),
       likedTrackIds: [],
       playlists: [],
+      recentTrackIds: [],
       savedAt: null
     };
   }
 
   if (
     !parsed ||
-    ![1, 2, 3].includes(parsed.version) ||
+    ![1, 2, 3, 4].includes(parsed.version) ||
     !Array.isArray(parsed.tracks)
   ) {
     return {
@@ -534,6 +552,7 @@ function parseStoredLibrary(rawValue) {
       importSummary: summarizeLibrary([]),
       likedTrackIds: [],
       playlists: [],
+      recentTrackIds: [],
       savedAt: null
     };
   }
@@ -558,12 +577,14 @@ function parseStoredLibrary(rawValue) {
 
   const likedTrackIds = normalizeLikedTrackIds(parsed.likedTrackIds, tracks);
   const playlists = normalizePlaylists(parsed.playlists, tracks);
+  const recentTrackIds = normalizeRecentTrackIds(parsed.recentTrackIds, tracks);
 
   return {
     tracks,
     importSummary: summarizeLibrary(tracks),
     likedTrackIds,
     playlists,
+    recentTrackIds,
     savedAt: sanitizeText(parsed.savedAt) || null
   };
 }
@@ -588,6 +609,7 @@ export {
   LIBRARY_STORAGE_KEY,
   normalizeLikedTrackIds,
   normalizePlaylists,
+  normalizeRecentTrackIds,
   normalizeImportedTrack,
   parseFilenameMetadata,
   parseId3v2Metadata,

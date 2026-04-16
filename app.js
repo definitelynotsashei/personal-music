@@ -15,6 +15,7 @@ import {
   LIBRARY_STORAGE_KEY,
   normalizeLikedTrackIds,
   normalizePlaylists,
+  normalizeRecentTrackIds,
   parseStoredLibrary,
   sortTracks,
   summarizeLibrary
@@ -62,6 +63,7 @@ const state = {
   tracks: [],
   likedTrackIds: [],
   playlists: [],
+  recentTrackIds: [],
   selectedPlaylistId: null,
   importInFlight: false,
   lastSavedAt: null,
@@ -102,7 +104,8 @@ function saveLibrary() {
   const snapshot = createLibrarySnapshot(
     state.tracks,
     state.likedTrackIds,
-    state.playlists
+    state.playlists,
+    state.recentTrackIds
   );
   state.lastSavedAt = snapshot.savedAt;
   window.localStorage.setItem(LIBRARY_STORAGE_KEY, JSON.stringify(snapshot));
@@ -120,6 +123,7 @@ function loadStoredLibrary() {
   state.tracks = storedLibrary.tracks;
   state.likedTrackIds = storedLibrary.likedTrackIds;
   state.playlists = storedLibrary.playlists;
+  state.recentTrackIds = storedLibrary.recentTrackIds;
   state.selectedPlaylistId = storedLibrary.playlists[0]?.id ?? null;
   state.lastSavedAt = storedLibrary.savedAt;
   return storedLibrary.tracks.length > 0 || storedLibrary.playlists.length > 0;
@@ -139,6 +143,7 @@ function clearStoredLibrary() {
   state.tracks = [];
   state.likedTrackIds = [];
   state.playlists = [];
+  state.recentTrackIds = [];
   state.selectedPlaylistId = null;
   state.lastSavedAt = null;
   state.player.queue = [];
@@ -163,6 +168,12 @@ function getPlaylistById(playlistId) {
 
 function isLiked(trackId) {
   return state.likedTrackIds.includes(trackId);
+}
+
+function getRecentTracks() {
+  return state.recentTrackIds
+    .map(trackId => getTrackById(trackId))
+    .filter(Boolean);
 }
 
 function ensureSelectedPlaylist() {
@@ -306,7 +317,7 @@ function updateNowPlaying() {
 
   if (canPlayTrack(currentTrack)) {
     playerNote.textContent =
-      'Playback is available for tracks imported in the current browser session. Likes and playlists persist with the local library model.';
+      'Playback is available for tracks imported in the current browser session. Likes, playlists, and recent history persist with the local library model.';
   } else {
     playerNote.textContent =
       'This track was restored from the saved library index, but playback needs the original files to be imported again in this session.';
@@ -522,6 +533,23 @@ function renderLikedView() {
   renderTracksView(likedTracks);
 }
 
+function renderRecentView() {
+  const recentTracks = getRecentTracks();
+
+  if (recentTracks.length === 0) {
+    trackList.hidden = false;
+    trackList.innerHTML = `
+      <div class="empty-state">
+        <h3>No recent plays yet</h3>
+        <p>Start playback from your library and the most recently played tracks will appear here.</p>
+      </div>
+    `;
+    return;
+  }
+
+  renderTracksView(recentTracks);
+}
+
 function renderLibraryBrowser() {
   clearLibraryButton.hidden = state.tracks.length === 0 && state.playlists.length === 0;
   updateBrowseTabs();
@@ -540,7 +568,7 @@ function renderLibraryBrowser() {
   }
 
   emptyState.hidden = state.tracks.length > 0 || state.playlists.length > 0;
-  trackList.hidden = !['tracks', 'liked'].includes(state.browseView);
+  trackList.hidden = !['tracks', 'liked', 'recent'].includes(state.browseView);
   playlistList.hidden = state.browseView !== 'playlists';
   albumList.hidden = state.browseView !== 'albums';
   artistList.hidden = state.browseView !== 'artists';
@@ -549,6 +577,8 @@ function renderLibraryBrowser() {
     renderTracksView();
   } else if (state.browseView === 'liked') {
     renderLikedView();
+  } else if (state.browseView === 'recent') {
+    renderRecentView();
   } else if (state.browseView === 'playlists') {
     renderPlaylistsView();
   } else if (state.browseView === 'albums') {
@@ -585,6 +615,7 @@ function mergeTracks(importedTracks) {
   state.tracks = sortTracks([...nextById.values()]);
   state.likedTrackIds = normalizeLikedTrackIds(state.likedTrackIds, state.tracks);
   state.playlists = normalizePlaylists(state.playlists, state.tracks);
+  state.recentTrackIds = normalizeRecentTrackIds(state.recentTrackIds, state.tracks);
   ensureSelectedPlaylist();
 
   if (state.player.shuffle && state.player.queue.length > 0) {
@@ -641,6 +672,19 @@ async function normalizeFiles(fileList) {
   return tracks;
 }
 
+function markTrackRecent(trackId) {
+  const track = getTrackById(trackId);
+  if (!track) {
+    return;
+  }
+
+  state.recentTrackIds = normalizeRecentTrackIds(
+    [track.id, ...state.recentTrackIds.filter(id => id !== track.id)],
+    state.tracks
+  );
+  saveLibrary();
+}
+
 function setQueueTrack(trackId, options = {}) {
   const track = getTrackById(trackId);
   if (!track) {
@@ -661,6 +705,9 @@ function setQueueTrack(trackId, options = {}) {
   state.player.currentTrackId = track.id;
   state.player.currentTime = 0;
   state.player.paused = options.autoplay ? false : true;
+  if (options.markRecent !== false && canPlayTrack(track)) {
+    markTrackRecent(track.id);
+  }
 
   if (canPlayTrack(track)) {
     audioPlayer.src = track.src;
@@ -915,7 +962,7 @@ async function handleImport(fileList) {
     const saved = saveLibrary();
     renderLibraryBrowser();
     setStatus(
-      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library, likes, and playlists were saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback, queue, browsing, likes, and playlists are available for the files imported in this session.`,
+      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library, likes, playlists, and recent history were saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback, queue, browsing, and personal library features are available for the files imported in this session.`,
       'success'
     );
   } catch (error) {
@@ -1095,7 +1142,7 @@ if (loadStoredLibrary()) {
     state.player.queueIndex = 0;
   }
   setStatus(
-    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback and queue actions.',
+    'Loaded the locally saved library index for this browser, including likes, playlists, and recent history. Re-import files in this session to enable playback and queue actions.',
     'success'
   );
 }

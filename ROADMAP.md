@@ -33,6 +33,8 @@ This file is the durable handoff for future work sessions. Use it with
 - Queue foundation baseline: explicit queue state, queue order, queue index, and basic repeat and shuffle behavior.
 - Library browsing baseline: explicit Tracks, Albums, and Artists views on top of the normalized library.
 - Personal-layer baseline part 1: persistent liked songs with a dedicated liked-library view.
+- Personal-layer baseline part 2: persistent playlists with playlist creation, track assignment, and a dedicated playlist-library view.
+- Personal-layer baseline part 3: persistent recently played history with a dedicated recent-library view.
 
 ## Stronger V1 Goal
 
@@ -114,7 +116,7 @@ Build local file import plus normalized track-library rendering, then make that 
 
 ### Current Recommended Task
 
-Build the next personal-layer slice: persistent playlists with playlist creation, track assignment, and a dedicated playlist-library view.
+Build the first search slice: fast library search across the normalized collection so tracks, albums, artists, playlists, and liked music are easier to reach in daily use.
 
 ### Current UI Direction
 
