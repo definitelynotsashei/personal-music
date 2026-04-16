@@ -122,8 +122,8 @@ Build the first search slice: fast library search across the normalized collecti
 
 - Cozy lo-fi study-session atmosphere.
 - Muted earthy palette with warm beige, soft brown, dusty pink, sage green, and faded blue.
-- Minimal layout with generous breathing room and gentle motion.
-- Functional playback-first UI with subtle texture and ambient depth rather than loud decoration.
+- Minimal layout with generous breathing room, gentle motion, and a sticky bottom player bar.
+- Functional playback-first UI with subtle texture, soft glass depth, hand-drawn iconography, and ambient den-like warmth rather than loud decoration.
 
 ## Working Priority Model
 

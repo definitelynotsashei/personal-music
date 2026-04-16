@@ -21,7 +21,7 @@ A local-first personal music player intended for your own library, with a focus 
 - Queue behavior works with explicit queue order instead of only the library sort order.
 - Library browsing works across tracks, albums, and artists instead of a single flat list.
 - The personal layer now includes persistent liked songs, playlists, and recently played history.
-- The current UI direction is a cozy lo-fi study aesthetic with muted earthy tones, subtle texture, soft shadows, and calm motion.
+- The current UI direction is a cozy late-night listening-den aesthetic with muted earthy tones, soft glass panels, hand-drawn iconography, a sticky bottom player bar, and calm motion.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
 ### Current product snapshot

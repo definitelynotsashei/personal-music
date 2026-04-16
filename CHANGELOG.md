@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-04-16 - Listening Den UI Pass
+
+### Features
+- Redesigned the player into a cozy late-night listening den with hand-drawn SVG transport icons, a sticky frosted-glass bottom player bar, deeper active-track styling, ambient hero waveform decoration, and richer album-art fallback visuals.
+
+### Documentation
+- Refined the documented UI direction around the sticky player bar, softer iconography, and warmer glassmorphism presentation.
+
 ## 2026-04-16 - Recently Played Slice
 
 ### Features

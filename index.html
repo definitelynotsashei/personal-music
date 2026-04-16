@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Personal Music Player</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Lora:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -16,14 +22,12 @@
 
     <main class="app-shell">
       <section class="hero hero-grid">
-        <div>
-          <p class="eyebrow">Late-night library player</p>
+        <div class="hero-main">
+          <svg class="hero-waveform" viewBox="0 0 640 180" aria-hidden="true">
+            <path d="M0 98 C42 72, 78 124, 122 98 S202 70, 248 98 S326 126, 370 98 S450 68, 494 98 S574 124, 640 96" />
+            <path d="M0 112 C38 92, 84 138, 126 112 S208 88, 250 112 S330 136, 374 110 S454 84, 500 112 S580 138, 640 114" />
+          </svg>
           <h1>Keep your music close, warm, and easy to live with.</h1>
-          <p class="lede">
-            A cozy lo-fi interface for your personal library: quiet colors,
-            soft edges, and enough breathing space to make long listening
-            sessions feel calm instead of crowded.
-          </p>
         </div>
         <div class="hero-card">
           <p class="hero-label">Mood</p>
@@ -37,7 +41,7 @@
       <section class="panel import-panel">
         <div class="panel-heading">
           <div>
-            <p class="section-label">Ingestion</p>
+            <p class="section-label">Add music</p>
             <h2>Import audio files</h2>
           </div>
           <p class="hint">
@@ -141,48 +145,25 @@
         <div class="panel-heading">
           <div>
             <p class="section-label">Now Playing</p>
-            <h2>Playback and queue foundation</h2>
+            <h2>Now playing</h2>
           </div>
-          <p id="player-note" class="hint">
-            Import tracks in this session to enable playback. Persisted metadata alone is not yet enough to reopen the underlying files after reload.
-          </p>
         </div>
 
-        <div class="player-shell">
-          <div class="now-playing-card">
-            <p class="summary-label">Current track</p>
+        <div class="player-shell expanded-player-shell">
+          <div class="now-playing-card expanded-now-playing-card">
+            <p class="summary-label">Listening room</p>
             <div id="album-art" class="album-art" aria-hidden="true">
               <span id="album-art-mark">LP</span>
             </div>
-            <strong id="now-playing-title">Nothing playing</strong>
-            <p id="now-playing-meta" class="track-player-meta">
-              Import local files to start playback.
-            </p>
-            <button id="like-button" class="button button-secondary like-button" type="button">
-              Like
-            </button>
           </div>
 
-          <div class="player-controls">
-            <div class="transport-row">
-              <button id="previous-button" class="button button-secondary" type="button">
-                Previous
-              </button>
-              <button id="play-button" class="button button-primary" type="button">
-                Play
-              </button>
-              <button id="next-button" class="button button-secondary" type="button">
-                Next
-              </button>
-            </div>
-
-            <div class="transport-row mode-row">
-              <button id="repeat-button" class="button button-secondary" type="button">
-                Repeat: Off
-              </button>
-              <button id="shuffle-button" class="button button-secondary" type="button">
-                Shuffle: Off
-              </button>
+          <div class="player-controls expanded-player-controls">
+            <div class="expanded-copy">
+              <p class="summary-label">Late-night details</p>
+              <strong class="expanded-title">Soft focus, steady playback</strong>
+              <p id="player-note" class="hint">
+                Import tracks in this session to wake the room up and make playback available.
+              </p>
             </div>
 
             <label class="range-group">
@@ -208,7 +189,7 @@
       <section class="panel queue-panel">
         <div class="panel-heading">
           <div>
-            <p class="section-label">Queue</p>
+            <p class="section-label">Up next</p>
             <h2>Current playback order</h2>
           </div>
           <p id="queue-note" class="hint">
@@ -226,6 +207,73 @@
         <div id="queue-list" class="queue-list" hidden></div>
       </section>
     </main>
+
+    <section id="sticky-player" class="sticky-player" data-state="idle">
+      <div id="sticky-album-art" class="sticky-album-art" aria-hidden="true">
+        <span id="sticky-album-art-mark">LP</span>
+      </div>
+
+      <div class="sticky-player-copy">
+        <strong id="now-playing-title">Nothing playing</strong>
+        <p id="now-playing-meta" class="track-player-meta">
+          Import local files to start playback.
+        </p>
+        <div id="sticky-equalizer" class="sticky-equalizer" aria-hidden="true">
+          <span></span>
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+
+      <div class="sticky-player-controls">
+        <button id="like-button" class="icon-button icon-button-secondary like-button" type="button" aria-label="Like track">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 20 C10 18.2, 6.3 15.6, 4.8 12.6 C3.5 10, 4.2 6.9, 7.1 6.1 C9.2 5.5, 10.8 6.7, 12 8.2 C13.2 6.7, 14.8 5.5, 16.9 6.1 C19.8 6.9, 20.5 10, 19.2 12.6 C17.7 15.6, 14 18.2, 12 20 Z" />
+          </svg>
+          <span class="sr-only">Like</span>
+        </button>
+        <button id="previous-button" class="icon-button icon-button-secondary" type="button" aria-label="Previous track">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 6 L7 18" />
+            <path d="M17.5 6.5 L10 12 L17.5 17.5 Z" />
+          </svg>
+          <span class="sr-only">Previous</span>
+        </button>
+        <button id="play-button" class="icon-button icon-button-primary" type="button" aria-label="Play">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 6.5 L17 12 L8 17.5 Z" />
+          </svg>
+          <span class="sr-only">Play</span>
+        </button>
+        <button id="next-button" class="icon-button icon-button-secondary" type="button" aria-label="Next track">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17 6 L17 18" />
+            <path d="M6.5 6.5 L14 12 L6.5 17.5 Z" />
+          </svg>
+          <span class="sr-only">Next</span>
+        </button>
+        <button id="shuffle-button" class="icon-button icon-button-secondary" type="button" aria-label="Shuffle off">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7 C7 7, 8.8 7, 11.2 11 C13.4 14.7, 15 17, 20 17" />
+            <path d="M17 14 L20 17 L17 20" />
+            <path d="M4 17 C7 17, 8.8 17, 11 13.5" />
+            <path d="M15 7 C16.4 7, 17.7 7, 20 7" />
+            <path d="M17 4 L20 7 L17 10" />
+          </svg>
+          <span class="sr-only">Shuffle</span>
+        </button>
+        <button id="repeat-button" class="icon-button icon-button-secondary" type="button" aria-label="Repeat off">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 8 C8.5 6.8, 10.2 6.4, 12.5 6.4 L17 6.4" />
+            <path d="M15 4 L18 6.4 L15 9" />
+            <path d="M17 16 C15.5 17.2, 13.8 17.6, 11.5 17.6 L7 17.6" />
+            <path d="M9 15 L6 17.6 L9 20" />
+          </svg>
+          <span class="sr-only">Repeat</span>
+        </button>
+      </div>
+    </section>
 
     <script type="module" src="app.js"></script>
   </body>

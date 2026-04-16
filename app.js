@@ -40,6 +40,9 @@ const createPlaylistButton = document.querySelector('#create-playlist-button');
 const playlistSelect = document.querySelector('#playlist-select');
 const clearLibraryButton = document.querySelector('#clear-library');
 const audioPlayer = document.querySelector('#audio-player');
+const stickyPlayer = document.querySelector('#sticky-player');
+const stickyAlbumArt = document.querySelector('#sticky-album-art');
+const stickyAlbumArtMark = document.querySelector('#sticky-album-art-mark');
 const nowPlayingTitle = document.querySelector('#now-playing-title');
 const nowPlayingMeta = document.querySelector('#now-playing-meta');
 const albumArt = document.querySelector('#album-art');
@@ -58,6 +61,30 @@ const durationTime = document.querySelector('#duration-time');
 const queueList = document.querySelector('#queue-list');
 const queueEmptyState = document.querySelector('#queue-empty-state');
 const queueNote = document.querySelector('#queue-note');
+
+function getIconMarkup(name) {
+  const icons = {
+    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6.5 L17 12 L8 17.5 Z" /></svg>',
+    pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6.5 L9 17.5" /><path d="M15 6.5 L15 17.5" /></svg>',
+    previous: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6 L7 18" /><path d="M17.5 6.5 L10 12 L17.5 17.5 Z" /></svg>',
+    next: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 6 L17 18" /><path d="M6.5 6.5 L14 12 L6.5 17.5 Z" /></svg>',
+    shuffle: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7 C7 7, 8.8 7, 11.2 11 C13.4 14.7, 15 17, 20 17" /><path d="M17 14 L20 17 L17 20" /><path d="M4 17 C7 17, 8.8 17, 11 13.5" /><path d="M15 7 C16.4 7, 17.7 7, 20 7" /><path d="M17 4 L20 7 L17 10" /></svg>',
+    repeat: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 8 C8.5 6.8, 10.2 6.4, 12.5 6.4 L17 6.4" /><path d="M15 4 L18 6.4 L15 9" /><path d="M17 16 C15.5 17.2, 13.8 17.6, 11.5 17.6 L7 17.6" /><path d="M9 15 L6 17.6 L9 20" /></svg>',
+    heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20 C10 18.2, 6.3 15.6, 4.8 12.6 C3.5 10, 4.2 6.9, 7.1 6.1 C9.2 5.5, 10.8 6.7, 12 8.2 C13.2 6.7, 14.8 5.5, 16.9 6.1 C19.8 6.9, 20.5 10, 19.2 12.6 C17.7 15.6, 14 18.2, 12 20 Z" /></svg>'
+  };
+
+  return icons[name] || '';
+}
+
+function setIconButton(button, iconName, label) {
+  if (!button) {
+    return;
+  }
+
+  button.innerHTML = `${getIconMarkup(iconName)}<span class="sr-only">${label}</span>`;
+  button.setAttribute('aria-label', label);
+  button.title = label;
+}
 
 const state = {
   tracks: [],
@@ -213,13 +240,18 @@ function syncTransportButtons() {
 }
 
 function updateModeButtons() {
-  repeatButton.textContent =
+  const repeatLabel =
     state.player.repeatMode === 'off'
-      ? 'Repeat: Off'
+      ? 'Repeat off'
       : state.player.repeatMode === 'all'
-        ? 'Repeat: All'
-        : 'Repeat: One';
-  shuffleButton.textContent = state.player.shuffle ? 'Shuffle: On' : 'Shuffle: Off';
+        ? 'Repeat all'
+        : 'Repeat one';
+  const shuffleLabel = state.player.shuffle ? 'Shuffle on' : 'Shuffle off';
+
+  setIconButton(repeatButton, 'repeat', repeatLabel);
+  setIconButton(shuffleButton, 'shuffle', shuffleLabel);
+  repeatButton.dataset.mode = state.player.repeatMode;
+  shuffleButton.dataset.active = String(state.player.shuffle);
 }
 
 function updateBrowseTabs() {
@@ -260,14 +292,14 @@ function updatePlaylistControls() {
 function updateLikeButton() {
   const currentTrack = getCurrentTrack();
   if (!currentTrack) {
-    likeButton.textContent = 'Like';
     likeButton.dataset.active = 'false';
+    setIconButton(likeButton, 'heart', 'Like track');
     return;
   }
 
   const liked = isLiked(currentTrack.id);
-  likeButton.textContent = liked ? 'Liked' : 'Like';
   likeButton.dataset.active = String(liked);
+  setIconButton(likeButton, 'heart', liked ? 'Unlike track' : 'Like track');
 }
 
 function updateNowPlaying() {
@@ -277,10 +309,13 @@ function updateNowPlaying() {
     nowPlayingTitle.textContent = 'Nothing playing';
     nowPlayingMeta.textContent = 'Import local files to start playback.';
     albumArt.dataset.state = 'idle';
+    stickyPlayer.dataset.state = 'idle';
+    stickyAlbumArt.dataset.state = 'idle';
     albumArtMark.textContent = 'LP';
+    stickyAlbumArtMark.textContent = 'LP';
     playerNote.textContent =
-      'Import tracks in this session to enable playback. Persisted metadata alone is not yet enough to reopen the underlying files after reload.';
-    playButton.textContent = 'Play';
+      'Import tracks in this session to wake the room up. Reloaded metadata still needs the original files before playback can start again.';
+    setIconButton(playButton, 'play', 'Play');
     currentTime.textContent = '0:00';
     durationTime.textContent = '--:--';
     seekInput.max = '0';
@@ -294,13 +329,16 @@ function updateNowPlaying() {
   nowPlayingTitle.textContent = currentTrack.title;
   nowPlayingMeta.textContent = `${currentTrack.artist} | ${currentTrack.album}`;
   albumArt.dataset.state = state.player.paused ? 'paused' : 'playing';
+  stickyPlayer.dataset.state = state.player.paused ? 'paused' : 'playing';
+  stickyAlbumArt.dataset.state = state.player.paused ? 'paused' : 'playing';
   albumArtMark.textContent = currentTrack.title
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map(word => word[0]?.toUpperCase() || '')
     .join('') || 'LP';
-  playButton.textContent = state.player.paused ? 'Play' : 'Pause';
+  stickyAlbumArtMark.textContent = albumArtMark.textContent;
+  setIconButton(playButton, state.player.paused ? 'play' : 'pause', state.player.paused ? 'Play' : 'Pause');
   currentTime.textContent = formatDuration(state.player.currentTime);
   durationTime.textContent = formatDuration(
     Number.isFinite(audioPlayer.duration) ? audioPlayer.duration : currentTrack.duration
@@ -317,10 +355,10 @@ function updateNowPlaying() {
 
   if (canPlayTrack(currentTrack)) {
     playerNote.textContent =
-      'Playback is available for tracks imported in the current browser session. Likes, playlists, and recent history persist with the local library model.';
+      'Playback is live for tracks imported in this session. Likes, playlists, and recent history stay tucked into the local library.';
   } else {
     playerNote.textContent =
-      'This track was restored from the saved library index, but playback needs the original files to be imported again in this session.';
+      'This track came back from the saved library, but the room needs the original files re-imported before it can play again.';
   }
 
   updateModeButtons();
@@ -404,11 +442,13 @@ function renderTracksView(tracksToRender = state.tracks) {
         <p>${track.artist} | ${track.album}</p>
       </div>
       <div class="track-actions">
-        <button class="track-play-button button button-secondary" type="button" data-track-id="${track.id}" ${playbackDisabled}>
-          ${actionLabel}
+        <button class="track-play-button icon-button icon-button-secondary" type="button" data-track-id="${track.id}" aria-label="${actionLabel}" title="${actionLabel}" ${playbackDisabled}>
+          ${getIconMarkup(isCurrent && !state.player.paused ? 'pause' : 'play')}
+          <span class="sr-only">${actionLabel}</span>
         </button>
-        <button class="track-like-button button button-secondary" type="button" data-track-id="${track.id}" data-active="${liked}">
-          ${liked ? 'Liked' : 'Like'}
+        <button class="track-like-button icon-button icon-button-secondary" type="button" data-track-id="${track.id}" data-active="${liked}" aria-label="${liked ? 'Unlike track' : 'Like track'}" title="${liked ? 'Unlike track' : 'Like track'}">
+          ${getIconMarkup('heart')}
+          <span class="sr-only">${liked ? 'Unlike track' : 'Like track'}</span>
         </button>
         <button class="track-playlist-button button button-secondary" type="button" data-track-id="${track.id}">
           Add To Playlist
@@ -1033,6 +1073,11 @@ function handleClearLibrary() {
 
 function registerPlayerEvents() {
   audioPlayer.volume = state.player.volume;
+  setIconButton(previousButton, 'previous', 'Previous track');
+  setIconButton(playButton, 'play', 'Play');
+  setIconButton(nextButton, 'next', 'Next track');
+  updateModeButtons();
+  updateLikeButton();
 
   audioPlayer.addEventListener('play', () => {
     state.player.paused = false;
