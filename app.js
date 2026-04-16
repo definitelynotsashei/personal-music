@@ -12,6 +12,7 @@ import {
   insertAfterCurrent,
   isSupportedAudioFile,
   LIBRARY_STORAGE_KEY,
+  normalizeLikedTrackIds,
   parseStoredLibrary,
   sortTracks,
   summarizeLibrary
@@ -35,6 +36,7 @@ const nowPlayingTitle = document.querySelector('#now-playing-title');
 const nowPlayingMeta = document.querySelector('#now-playing-meta');
 const albumArt = document.querySelector('#album-art');
 const albumArtMark = document.querySelector('#album-art-mark');
+const likeButton = document.querySelector('#like-button');
 const playerNote = document.querySelector('#player-note');
 const playButton = document.querySelector('#play-button');
 const previousButton = document.querySelector('#previous-button');
@@ -51,6 +53,7 @@ const queueNote = document.querySelector('#queue-note');
 
 const state = {
   tracks: [],
+  likedTrackIds: [],
   importInFlight: false,
   lastSavedAt: null,
   browseView: 'tracks',
@@ -87,7 +90,7 @@ function saveLibrary() {
     return false;
   }
 
-  const snapshot = createLibrarySnapshot(state.tracks);
+  const snapshot = createLibrarySnapshot(state.tracks, state.likedTrackIds);
   state.lastSavedAt = snapshot.savedAt;
   window.localStorage.setItem(LIBRARY_STORAGE_KEY, JSON.stringify(snapshot));
   return true;
@@ -102,6 +105,7 @@ function loadStoredLibrary() {
     window.localStorage.getItem(LIBRARY_STORAGE_KEY)
   );
   state.tracks = storedLibrary.tracks;
+  state.likedTrackIds = storedLibrary.likedTrackIds;
   state.lastSavedAt = storedLibrary.savedAt;
   return storedLibrary.tracks.length > 0;
 }
@@ -118,6 +122,7 @@ function resetQueueFromTracks() {
 function clearStoredLibrary() {
   revokeTrackSources(state.tracks);
   state.tracks = [];
+  state.likedTrackIds = [];
   state.lastSavedAt = null;
   state.player.queue = [];
   state.player.queueIndex = -1;
@@ -133,6 +138,10 @@ function getTrackById(trackId) {
 
 function getCurrentTrack() {
   return getTrackById(state.player.currentTrackId);
+}
+
+function isLiked(trackId) {
+  return state.likedTrackIds.includes(trackId);
 }
 
 function setStatus(message, tone = 'normal') {
@@ -162,6 +171,7 @@ function syncTransportButtons() {
   volumeInput.disabled = !hasTracks;
   repeatButton.disabled = !hasTracks;
   shuffleButton.disabled = !hasTracks;
+  likeButton.disabled = !currentTrack;
 }
 
 function updateModeButtons() {
@@ -182,6 +192,19 @@ function updateBrowseTabs() {
   });
 }
 
+function updateLikeButton() {
+  const currentTrack = getCurrentTrack();
+  if (!currentTrack) {
+    likeButton.textContent = 'Like';
+    likeButton.dataset.active = 'false';
+    return;
+  }
+
+  const liked = isLiked(currentTrack.id);
+  likeButton.textContent = liked ? 'Liked' : 'Like';
+  likeButton.dataset.active = String(liked);
+}
+
 function updateNowPlaying() {
   const currentTrack = getCurrentTrack();
 
@@ -198,6 +221,7 @@ function updateNowPlaying() {
     seekInput.max = '0';
     seekInput.value = '0';
     updateModeButtons();
+    updateLikeButton();
     syncTransportButtons();
     return;
   }
@@ -228,13 +252,14 @@ function updateNowPlaying() {
 
   if (canPlayTrack(currentTrack)) {
     playerNote.textContent =
-      'Playback is available for tracks imported in the current browser session. Queue behavior is session-local for now.';
+      'Playback is available for tracks imported in the current browser session. Likes persist with the local library model.';
   } else {
     playerNote.textContent =
       'This track was restored from the saved library index, but playback needs the original files to be imported again in this session.';
   }
 
   updateModeButtons();
+  updateLikeButton();
   syncTransportButtons();
 }
 
@@ -286,17 +311,17 @@ function renderQueue() {
     : 'The queue follows an explicit session order. Add tracks or toggle shuffle to change playback flow.';
 }
 
-function renderTracksView() {
+function renderTracksView(tracksToRender = state.tracks) {
   trackList.innerHTML = '';
 
-  if (state.tracks.length === 0) {
+  if (tracksToRender.length === 0) {
     trackList.hidden = true;
     return;
   }
 
   const fragment = document.createDocumentFragment();
 
-  state.tracks.forEach(track => {
+  tracksToRender.forEach(track => {
     const article = document.createElement('article');
     const isCurrent = track.id === state.player.currentTrackId;
     article.className = 'track-row';
@@ -306,6 +331,7 @@ function renderTracksView() {
 
     const actionLabel = isCurrent && !state.player.paused ? 'Pause' : 'Play';
     const playbackDisabled = canPlayTrack(track) ? '' : 'disabled';
+    const liked = isLiked(track.id);
     article.innerHTML = `
       <div class="track-index">${track.trackNumber ?? '-'}</div>
       <div class="track-main">
@@ -315,6 +341,9 @@ function renderTracksView() {
       <div class="track-actions">
         <button class="track-play-button button button-secondary" type="button" data-track-id="${track.id}" ${playbackDisabled}>
           ${actionLabel}
+        </button>
+        <button class="track-like-button button button-secondary" type="button" data-track-id="${track.id}" data-active="${liked}">
+          ${liked ? 'Liked' : 'Like'}
         </button>
         <button class="track-queue-button button button-secondary" type="button" data-track-id="${track.id}">
           Play Next
@@ -390,6 +419,11 @@ function renderArtistsView() {
   artistList.hidden = false;
 }
 
+function renderLikedView() {
+  const likedTracks = state.tracks.filter(track => isLiked(track.id));
+  renderTracksView(likedTracks);
+}
+
 function renderLibraryBrowser() {
   clearLibraryButton.hidden = state.tracks.length === 0;
   updateBrowseTabs();
@@ -406,12 +440,14 @@ function renderLibraryBrowser() {
   }
 
   emptyState.hidden = true;
-  trackList.hidden = state.browseView !== 'tracks';
+  trackList.hidden = !['tracks', 'liked'].includes(state.browseView);
   albumList.hidden = state.browseView !== 'albums';
   artistList.hidden = state.browseView !== 'artists';
 
   if (state.browseView === 'tracks') {
     renderTracksView();
+  } else if (state.browseView === 'liked') {
+    renderLikedView();
   } else if (state.browseView === 'albums') {
     renderAlbumsView();
   } else {
@@ -444,6 +480,7 @@ function mergeTracks(importedTracks) {
   });
 
   state.tracks = sortTracks([...nextById.values()]);
+  state.likedTrackIds = normalizeLikedTrackIds(state.likedTrackIds, state.tracks);
 
   if (state.player.shuffle && state.player.queue.length > 0) {
     state.player.queue = createShuffledQueue(
@@ -621,6 +658,25 @@ function queueTrackNext(trackId) {
   setStatus(`Queued "${track.title}" to play next.`, 'success');
 }
 
+function toggleLike(trackId = state.player.currentTrackId) {
+  const track = getTrackById(trackId);
+  if (!track) {
+    return;
+  }
+
+  const liked = isLiked(track.id);
+  state.likedTrackIds = liked
+    ? state.likedTrackIds.filter(id => id !== track.id)
+    : [...state.likedTrackIds, track.id];
+  state.likedTrackIds = normalizeLikedTrackIds(state.likedTrackIds, state.tracks);
+  saveLibrary();
+  renderLibraryBrowser();
+  setStatus(
+    liked ? `Removed "${track.title}" from liked songs.` : `Added "${track.title}" to liked songs.`,
+    'success'
+  );
+}
+
 function cycleRepeatMode() {
   state.player.repeatMode =
     state.player.repeatMode === 'off'
@@ -674,7 +730,7 @@ async function handleImport(fileList) {
   );
 
   try {
-    const tracks = await normalizeFiles(supportedFiles);
+    const tracks = await normalizeFiles(fileList);
     mergeTracks(tracks);
     const currentTrackStillExists = state.player.currentTrackId
       ? state.tracks.some(track => track.id === state.player.currentTrackId)
@@ -690,7 +746,7 @@ async function handleImport(fileList) {
     const saved = saveLibrary();
     renderLibraryBrowser();
     setStatus(
-      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library metadata was saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback, queue, and browsing behavior are available for the files imported in this session.`,
+      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library and liked-song state were saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback, queue, browsing, and likes are available for the files imported in this session.`,
       'success'
     );
   } catch (error) {
@@ -710,6 +766,12 @@ function handleTrackListClick(event) {
   const playButtonElement = event.target.closest('.track-play-button');
   if (playButtonElement) {
     togglePlayback(playButtonElement.dataset.trackId);
+    return;
+  }
+
+  const likeButtonElement = event.target.closest('.track-like-button');
+  if (likeButtonElement) {
+    toggleLike(likeButtonElement.dataset.trackId);
     return;
   }
 
@@ -807,6 +869,7 @@ artistList?.addEventListener('click', handleTrackListClick);
 browseTabs.forEach(tab => {
   tab.addEventListener('click', () => setBrowseView(tab.dataset.view));
 });
+likeButton?.addEventListener('click', () => toggleLike());
 playButton?.addEventListener('click', () => togglePlayback());
 previousButton?.addEventListener('click', () => stepQueue(-1));
 nextButton?.addEventListener('click', () => stepQueue(1));
@@ -838,7 +901,7 @@ if (loadStoredLibrary()) {
     state.player.queueIndex = 0;
   }
   setStatus(
-    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback, queue, and browsing actions.',
+    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback, queue, and full browsing actions.',
     'success'
   );
 }

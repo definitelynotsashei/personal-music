@@ -289,6 +289,12 @@ h3 {
   border-color: rgba(109, 86, 72, 0.22);
 }
 
+.like-button[data-active='true'],
+.track-like-button[data-active='true'] {
+  background: linear-gradient(180deg, rgba(195, 161, 160, 0.5), rgba(214, 187, 170, 0.32));
+  border-color: rgba(154, 112, 115, 0.26);
+}
+
 .button:disabled,
 .track-play-button:disabled {
   opacity: 0.42;
@@ -614,6 +620,11 @@ input[type='range']::-moz-range-thumb {
 .track-play-button,
 .track-queue-button {
   min-width: 6rem;
+}
+
+.like-button,
+.track-like-button {
+  min-width: 5.5rem;
 }
 
 .track-meta {

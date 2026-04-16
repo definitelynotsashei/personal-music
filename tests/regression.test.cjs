@@ -129,12 +129,13 @@ test('library snapshots store normalized tracks and summary metadata', async () 
       size: 123,
       lastModified: 456
     }
-  ]);
+  ], ['track-1']);
 
-  assert.equal(snapshot.version, 1);
+  assert.equal(snapshot.version, 2);
   assert.equal(snapshot.importSummary.trackCount, 1);
   assert.equal(snapshot.importSummary.artistCount, 1);
   assert.equal(snapshot.tracks[0].title, 'Feather');
+  assert.deepEqual(snapshot.likedTrackIds, ['track-1']);
   assert.equal(typeof snapshot.savedAt, 'string');
 });
 
@@ -163,11 +164,13 @@ test('stored library parsing hydrates valid snapshots and rejects invalid ones',
 
   assert.equal(valid.tracks.length, 1);
   assert.equal(valid.importSummary.trackCount, 1);
+  assert.deepEqual(valid.likedTrackIds, []);
   assert.equal(valid.savedAt, '2026-04-16T00:00:00.000Z');
 
   const invalid = parseStoredLibrary('{not valid json');
   assert.equal(invalid.tracks.length, 0);
   assert.equal(invalid.importSummary.trackCount, 0);
+  assert.deepEqual(invalid.likedTrackIds, []);
 });
 
 test('adjacent track lookup follows library order bounds', async () => {
@@ -264,4 +267,16 @@ test('artist grouping summarizes album and track counts', async () => {
   assert.equal(groups[0].albumCount, 2);
   assert.equal(groups[0].trackCount, 3);
   assert.equal(groups[0].totalDuration, 330);
+});
+
+test('liked track normalization removes duplicates and unknown ids', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { normalizeLikedTrackIds } = await import(moduleUrl);
+
+  const likedIds = normalizeLikedTrackIds(
+    ['track-1', 'track-2', 'track-1', 'missing'],
+    [{ id: 'track-1' }, { id: 'track-2' }]
+  );
+
+  assert.deepEqual(likedIds, ['track-1', 'track-2']);
 });

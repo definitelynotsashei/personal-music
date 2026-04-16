@@ -9,7 +9,7 @@ const SUPPORTED_AUDIO_EXTENSIONS = new Set([
   'opus'
 ]);
 
-const LIBRARY_STORAGE_KEY = 'personal-music-player.library.v1';
+const LIBRARY_STORAGE_KEY = 'personal-music-player.library.v2';
 
 function getFileExtension(filename = '') {
   const normalized = String(filename).toLowerCase();
@@ -369,6 +369,11 @@ function createShuffledQueue(queue, currentTrackId) {
   return currentTrackId ? [currentTrackId, ...remaining] : remaining;
 }
 
+function normalizeLikedTrackIds(likedTrackIds, tracks) {
+  const validIds = new Set(tracks.map(track => track.id));
+  return [...new Set((likedTrackIds || []).filter(id => validIds.has(id)))];
+}
+
 function groupTracksByAlbum(tracks) {
   const albumMap = new Map();
 
@@ -442,14 +447,16 @@ function groupTracksByArtist(tracks) {
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function createLibrarySnapshot(tracks) {
+function createLibrarySnapshot(tracks, likedTrackIds = []) {
   const sortedTracks = sortTracks(tracks);
   const importSummary = summarizeLibrary(sortedTracks);
+  const normalizedLikes = normalizeLikedTrackIds(likedTrackIds, sortedTracks);
 
   return {
-    version: 1,
+    version: 2,
     savedAt: new Date().toISOString(),
     importSummary,
+    likedTrackIds: normalizedLikes,
     tracks: sortedTracks.map(track => ({
       id: sanitizeText(track.id),
       title: sanitizeText(track.title) || 'Unknown Track',
@@ -473,6 +480,7 @@ function parseStoredLibrary(rawValue) {
     return {
       tracks: [],
       importSummary: summarizeLibrary([]),
+      likedTrackIds: [],
       savedAt: null
     };
   }
@@ -484,14 +492,20 @@ function parseStoredLibrary(rawValue) {
     return {
       tracks: [],
       importSummary: summarizeLibrary([]),
+      likedTrackIds: [],
       savedAt: null
     };
   }
 
-  if (!parsed || parsed.version !== 1 || !Array.isArray(parsed.tracks)) {
+  if (
+    !parsed ||
+    ![1, 2].includes(parsed.version) ||
+    !Array.isArray(parsed.tracks)
+  ) {
     return {
       tracks: [],
       importSummary: summarizeLibrary([]),
+      likedTrackIds: [],
       savedAt: null
     };
   }
@@ -514,9 +528,12 @@ function parseStoredLibrary(rawValue) {
     }))
   );
 
+  const likedTrackIds = normalizeLikedTrackIds(parsed.likedTrackIds, tracks);
+
   return {
     tracks,
     importSummary: summarizeLibrary(tracks),
+    likedTrackIds,
     savedAt: sanitizeText(parsed.savedAt) || null
   };
 }
@@ -538,6 +555,7 @@ export {
   insertAfterCurrent,
   isSupportedAudioFile,
   LIBRARY_STORAGE_KEY,
+  normalizeLikedTrackIds,
   normalizeImportedTrack,
   parseFilenameMetadata,
   parseId3v2Metadata,

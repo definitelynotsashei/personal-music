@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - Liked Songs Slice
+
+### Features
+- Added the first personal-layer slice with persistent liked songs, like toggles, and a dedicated liked-library view.
+
+### Documentation
+- Advanced the roadmap and project state from library browsing into the personal layer.
+
+### Tests
+- Expanded regression coverage for liked-song storage hydration and normalization.
+
 ## 2026-04-16 - Library Browsing Slice
 
 ### Features
