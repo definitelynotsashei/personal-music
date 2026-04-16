@@ -1,0 +1,9 @@
+{
+  "name": "personal-music-player",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node scripts/local-server.cjs",
+    "test": "node tests/regression.test.cjs"
+  }
+}

@@ -1,0 +1,79 @@
+:root {
+  color-scheme: dark;
+  --bg: #0f1115;
+  --panel: #171b22;
+  --panel-border: #2a313d;
+  --text: #edf2ff;
+  --muted: #9aa7bf;
+  --accent: #69d2a2;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(105, 210, 162, 0.22), transparent 35%),
+    linear-gradient(180deg, #12161d 0%, var(--bg) 60%);
+  color: var(--text);
+}
+
+.app-shell {
+  width: min(960px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 4rem 0 5rem;
+}
+
+.hero,
+.panel {
+  background: rgba(23, 27, 34, 0.88);
+  border: 1px solid var(--panel-border);
+  border-radius: 24px;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.panel {
+  margin-top: 1rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 0.8rem;
+}
+
+h1,
+h2 {
+  margin: 0;
+}
+
+.lede,
+.status,
+li {
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+ul {
+  padding-left: 1.25rem;
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    width: min(100% - 1rem, 960px);
+    padding-top: 1rem;
+  }
+
+  .hero,
+  .panel {
+    border-radius: 18px;
+  }
+}
