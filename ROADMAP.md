@@ -121,6 +121,7 @@ Build the next durable file-access follow-through: broaden library reopening bey
 ### Next Session Reference
 
 - The first reconnectable-folder slice now exists, so the next session should stay on durable file access instead of returning to shell breadth.
+- Keep the tabbed shell behaving like true section navigation; do not let cached one-page behavior or cross-section sprawl regress.
 - Focus next on broader browser coverage, richer saved-access restoration, or cleaner file-access extraction without widening unrelated UI scope.
 
 ### Current UI Direction

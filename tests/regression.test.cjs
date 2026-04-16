@@ -63,6 +63,22 @@ test('settings includes a reconnect library folder control', () => {
   assert.match(html, /id="reconnect-library-folder"/);
 });
 
+test('app shell syncs sections with the URL hash', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
+
+  assert.match(script, /window\.addEventListener\('hashchange'/);
+  assert.match(script, /window\.history\.replaceState/);
+  assert.match(script, /window\.location\.hash\.slice\(1\)/);
+});
+
+test('service worker prefers fresh shell assets and activates immediately', () => {
+  const script = fs.readFileSync(path.join(ROOT, 'service-worker.js'), 'utf8');
+
+  assert.match(script, /self\.skipWaiting\(\)/);
+  assert.match(script, /self\.clients\.claim\(\)/);
+  assert.match(script, /cache\.put\(event\.request, response\.clone\(\)\)/);
+});
+
 test('pwa shell assets exist', () => {
   [
     'manifest.json',

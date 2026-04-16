@@ -87,6 +87,7 @@ const queueEmptyState = document.querySelector('#queue-empty-state');
 const queueNote = document.querySelector('#queue-note');
 const directoryPickerSupported = typeof window.showDirectoryPicker === 'function';
 const indexedDbSupported = typeof window.indexedDB !== 'undefined';
+const APP_SECTIONS = new Set(['home', 'library', 'playlists', 'now-playing', 'settings']);
 const LIBRARY_ACCESS_DB_NAME = 'personal-music-player.file-access.v1';
 const LIBRARY_ACCESS_STORE = 'handles';
 const LIBRARY_DIRECTORY_HANDLE_KEY = 'library-directory';
@@ -210,7 +211,7 @@ function openExpandedPlayer() {
     state.mobilePlayerOpen = true;
   }
 
-  updateAppSections();
+  updateAppSections({ updateLocation: true });
   updatePlayerShellMode();
 }
 
@@ -222,12 +223,28 @@ function closeExpandedPlayer() {
   state.mobilePlayerOpen = false;
   if (state.lastNonPlayerSection && state.lastNonPlayerSection !== 'now-playing') {
     state.appSection = state.lastNonPlayerSection;
-    updateAppSections();
+    updateAppSections({ updateLocation: true });
   }
   updatePlayerShellMode();
 }
 
-function updateAppSections() {
+function normalizeAppSection(section) {
+  return APP_SECTIONS.has(section) ? section : 'home';
+}
+
+function updateLocationForSection() {
+  const nextHash = state.appSection === 'home' ? '' : `#${state.appSection}`;
+  if (window.location.hash === nextHash) {
+    return;
+  }
+
+  const nextUrl = `${window.location.pathname}${window.location.search}${nextHash}`;
+  window.history.replaceState(null, '', nextUrl);
+}
+
+function updateAppSections(options = {}) {
+  const { updateLocation = false } = options;
+
   appTabs.forEach(tab => {
     const isActive = tab.dataset.section === state.appSection;
     tab.dataset.active = String(isActive);
@@ -237,19 +254,29 @@ function updateAppSections() {
   appViews.forEach(view => {
     view.hidden = view.id !== `${state.appSection}-view`;
   });
+
+  if (updateLocation) {
+    updateLocationForSection();
+  }
 }
 
-function setAppSection(section) {
-  state.appSection = section;
-  if (section === 'now-playing' && state.compactPlayerMode) {
+function setAppSection(section, options = {}) {
+  const { updateLocation = true, scrollToTop = true } = options;
+  const normalizedSection = normalizeAppSection(section);
+  state.appSection = normalizedSection;
+  if (normalizedSection === 'now-playing' && state.compactPlayerMode) {
     state.mobilePlayerOpen = true;
-  } else if (section !== 'now-playing') {
-    state.lastNonPlayerSection = section;
+  } else if (normalizedSection !== 'now-playing') {
+    state.lastNonPlayerSection = normalizedSection;
     state.mobilePlayerOpen = false;
   }
 
-  updateAppSections();
+  updateAppSections({ updateLocation });
   updatePlayerShellMode();
+
+  if (scrollToTop) {
+    window.scrollTo({ top: 0, behavior: 'auto' });
+  }
 }
 
 function canUseLocalStorage() {
@@ -1802,6 +1829,12 @@ window.addEventListener('appinstalled', () => {
 window.addEventListener('online', updateConnectionStatus);
 window.addEventListener('offline', updateConnectionStatus);
 window.addEventListener('resize', updatePlayerShellMode);
+window.addEventListener('hashchange', () => {
+  setAppSection(window.location.hash.slice(1), {
+    updateLocation: false,
+    scrollToTop: true
+  });
+});
 window.addEventListener('keydown', event => {
   if (event.key === 'Escape') {
     closeExpandedPlayer();
@@ -1913,7 +1946,10 @@ volumeInput?.addEventListener('input', event => {
 });
 
 registerPlayerEvents();
-updateAppSections();
+setAppSection(window.location.hash.slice(1), {
+  updateLocation: false,
+  scrollToTop: false
+});
 updatePlayerShellMode();
 updateConnectionStatus();
 updateInstallStatus();

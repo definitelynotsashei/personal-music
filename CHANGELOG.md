@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-04-16 - Tab Navigation Reliability Slice
+
+### Features
+- Synced the top-level Home, Library, Playlists, Now Playing, and Settings tabs to the URL hash and viewport reset so section changes behave like distinct app surfaces instead of inert one-page controls.
+- Hardened the service worker to activate immediately and prefer fresh shell assets so cached installs are less likely to stay stuck on an older single-page shell.
+
+### Documentation
+- Documented the shell-reliability follow-through so future work preserves real section ownership instead of drifting back toward one overloaded page.
+
+### Tests
+- Expanded regression coverage for URL-backed section navigation and immediate-refresh service worker behavior.
+
 ## 2026-04-16 - Durable Folder Reconnect Slice
 
 ### Features

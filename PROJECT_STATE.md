@@ -4,7 +4,7 @@ _Last updated 2026-04-16. For context-sharing, not a coding reference._
 ---
 
 ## In Progress
-Following through on durable file access after landing the first reconnectable-folder slice for saved libraries.
+Following through on app-shell reliability so the split-tab navigation actually loads and behaves like distinct surfaces instead of falling back to a stale one-page shell.
 
 ---
 
@@ -26,6 +26,8 @@ A local-first personal music player intended for your own library, with a focus 
 - The PWA shell now has a manifest, install prompt handling, cached shell assets, and clearer offline/install messaging.
 - The current UI direction is a cozy late-night listening-den aesthetic with muted earthy tones, soft glass panels, hand-drawn iconography, a sticky bottom player bar, calm motion, a mobile-expanded now-playing room, and a tabbed app shell that separates the main surfaces.
 - Section ownership is stricter now: Home is a lighter dashboard, Library owns browsing and search, Playlists owns playlist selection and detail, Now Playing owns the full player and queue, and Settings owns import/install/offline context plus current limitations.
+- The app shell now syncs top-level tabs with the URL hash and scroll reset so section changes behave more like real navigation.
+- The service worker now prefers fresh shell assets and activates immediately so cached installs are less likely to stay stuck on an older one-page build.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
 ### Current product snapshot
@@ -57,7 +59,7 @@ A local-first personal music player intended for your own library, with a focus 
 
 ### Current recommended next task
 - Extend durable file access beyond the first reconnectable-folder slice, especially around broader browser support and smoother saved-access restoration.
-- Tomorrow's starting point should stay on file access follow-through, not more shell breadth, with any `app.js` cleanup kept strictly in support of that work.
+- Keep shell changes focused on reliability and section ownership only; broader work should return to file-access follow-through instead of re-expanding one-page UI sprawl.
 
 ---
 
