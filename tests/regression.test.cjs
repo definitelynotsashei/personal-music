@@ -129,13 +129,23 @@ test('library snapshots store normalized tracks and summary metadata', async () 
       size: 123,
       lastModified: 456
     }
-  ], ['track-1']);
+  ], ['track-1'], [
+    {
+      id: 'playlist:night-mix:1',
+      name: 'Night Mix',
+      trackIds: ['track-1', 'missing'],
+      createdAt: '2026-04-16T00:00:00.000Z',
+      updatedAt: '2026-04-16T00:00:00.000Z'
+    }
+  ]);
 
-  assert.equal(snapshot.version, 2);
+  assert.equal(snapshot.version, 3);
   assert.equal(snapshot.importSummary.trackCount, 1);
   assert.equal(snapshot.importSummary.artistCount, 1);
   assert.equal(snapshot.tracks[0].title, 'Feather');
   assert.deepEqual(snapshot.likedTrackIds, ['track-1']);
+  assert.equal(snapshot.playlists.length, 1);
+  assert.deepEqual(snapshot.playlists[0].trackIds, ['track-1']);
   assert.equal(typeof snapshot.savedAt, 'string');
 });
 
@@ -171,6 +181,73 @@ test('stored library parsing hydrates valid snapshots and rejects invalid ones',
   assert.equal(invalid.tracks.length, 0);
   assert.equal(invalid.importSummary.trackCount, 0);
   assert.deepEqual(invalid.likedTrackIds, []);
+});
+
+test('playlist normalization removes invalid tracks and empty names', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { normalizePlaylists } = await import(moduleUrl);
+
+  const playlists = normalizePlaylists(
+    [
+      {
+        id: 'playlist:late-night:1',
+        name: 'Late Night',
+        trackIds: ['track-2', 'missing', 'track-2', 'track-1'],
+        createdAt: '2026-04-16T00:00:00.000Z',
+        updatedAt: '2026-04-16T01:00:00.000Z'
+      },
+      {
+        id: '',
+        name: '   ',
+        trackIds: ['track-1']
+      }
+    ],
+    [{ id: 'track-1' }, { id: 'track-2' }]
+  );
+
+  assert.equal(playlists.length, 1);
+  assert.equal(playlists[0].name, 'Late Night');
+  assert.deepEqual(playlists[0].trackIds, ['track-2', 'track-1']);
+  assert.equal(playlists[0].updatedAt, '2026-04-16T01:00:00.000Z');
+});
+
+test('stored library parsing hydrates playlists from current snapshots', async () => {
+  const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
+  const { parseStoredLibrary } = await import(moduleUrl);
+
+  const parsed = parseStoredLibrary(JSON.stringify({
+    version: 3,
+    savedAt: '2026-04-16T00:00:00.000Z',
+    likedTrackIds: ['track-1'],
+    playlists: [
+      {
+        id: 'playlist:focus:1',
+        name: 'Focus',
+        trackIds: ['track-1', 'missing'],
+        createdAt: '2026-04-16T00:00:00.000Z',
+        updatedAt: '2026-04-16T02:00:00.000Z'
+      }
+    ],
+    tracks: [
+      {
+        id: 'track-1',
+        title: 'Feather',
+        artist: 'Nujabes',
+        album: 'Modal Soul',
+        trackNumber: 1,
+        duration: 204,
+        filename: '01 - Feather.mp3',
+        relativePath: 'Modal Soul/01 - Feather.mp3',
+        size: 123,
+        lastModified: 456
+      }
+    ]
+  }));
+
+  assert.equal(parsed.playlists.length, 1);
+  assert.equal(parsed.playlists[0].name, 'Focus');
+  assert.deepEqual(parsed.playlists[0].trackIds, ['track-1']);
+  assert.deepEqual(parsed.likedTrackIds, ['track-1']);
 });
 
 test('adjacent track lookup follows library order bounds', async () => {

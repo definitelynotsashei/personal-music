@@ -9,7 +9,7 @@ const SUPPORTED_AUDIO_EXTENSIONS = new Set([
   'opus'
 ]);
 
-const LIBRARY_STORAGE_KEY = 'personal-music-player.library.v2';
+const LIBRARY_STORAGE_KEY = 'personal-music-player.library.v3';
 
 function getFileExtension(filename = '') {
   const normalized = String(filename).toLowerCase();
@@ -374,6 +374,29 @@ function normalizeLikedTrackIds(likedTrackIds, tracks) {
   return [...new Set((likedTrackIds || []).filter(id => validIds.has(id)))];
 }
 
+function createPlaylistId(name) {
+  const slug = sanitizeText(name)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'playlist';
+  return `playlist:${slug}:${Date.now()}`;
+}
+
+function normalizePlaylists(playlists = [], tracks = []) {
+  const validIds = new Set(tracks.map(track => track.id));
+
+  return playlists
+    .filter(playlist => sanitizeText(playlist?.name))
+    .map(playlist => ({
+      id: sanitizeText(playlist.id) || createPlaylistId(playlist.name),
+      name: sanitizeText(playlist.name),
+      trackIds: [...new Set((playlist.trackIds || []).filter(id => validIds.has(id)))],
+      createdAt: sanitizeText(playlist.createdAt) || new Date().toISOString(),
+      updatedAt: sanitizeText(playlist.updatedAt) || new Date().toISOString()
+    }))
+    .sort((left, right) => left.name.localeCompare(right.name));
+}
+
 function groupTracksByAlbum(tracks) {
   const albumMap = new Map();
 
@@ -447,16 +470,18 @@ function groupTracksByArtist(tracks) {
     .sort((left, right) => left.name.localeCompare(right.name));
 }
 
-function createLibrarySnapshot(tracks, likedTrackIds = []) {
+function createLibrarySnapshot(tracks, likedTrackIds = [], playlists = []) {
   const sortedTracks = sortTracks(tracks);
   const importSummary = summarizeLibrary(sortedTracks);
   const normalizedLikes = normalizeLikedTrackIds(likedTrackIds, sortedTracks);
+  const normalizedPlaylists = normalizePlaylists(playlists, sortedTracks);
 
   return {
-    version: 2,
+    version: 3,
     savedAt: new Date().toISOString(),
     importSummary,
     likedTrackIds: normalizedLikes,
+    playlists: normalizedPlaylists,
     tracks: sortedTracks.map(track => ({
       id: sanitizeText(track.id),
       title: sanitizeText(track.title) || 'Unknown Track',
@@ -481,6 +506,7 @@ function parseStoredLibrary(rawValue) {
       tracks: [],
       importSummary: summarizeLibrary([]),
       likedTrackIds: [],
+      playlists: [],
       savedAt: null
     };
   }
@@ -493,19 +519,21 @@ function parseStoredLibrary(rawValue) {
       tracks: [],
       importSummary: summarizeLibrary([]),
       likedTrackIds: [],
+      playlists: [],
       savedAt: null
     };
   }
 
   if (
     !parsed ||
-    ![1, 2].includes(parsed.version) ||
+    ![1, 2, 3].includes(parsed.version) ||
     !Array.isArray(parsed.tracks)
   ) {
     return {
       tracks: [],
       importSummary: summarizeLibrary([]),
       likedTrackIds: [],
+      playlists: [],
       savedAt: null
     };
   }
@@ -529,11 +557,13 @@ function parseStoredLibrary(rawValue) {
   );
 
   const likedTrackIds = normalizeLikedTrackIds(parsed.likedTrackIds, tracks);
+  const playlists = normalizePlaylists(parsed.playlists, tracks);
 
   return {
     tracks,
     importSummary: summarizeLibrary(tracks),
     likedTrackIds,
+    playlists,
     savedAt: sanitizeText(parsed.savedAt) || null
   };
 }
@@ -541,6 +571,7 @@ function parseStoredLibrary(rawValue) {
 export {
   buildTrackFromFile,
   canPlayTrack,
+  createPlaylistId,
   createDefaultQueue,
   createLibrarySnapshot,
   createTrackId,
@@ -556,6 +587,7 @@ export {
   isSupportedAudioFile,
   LIBRARY_STORAGE_KEY,
   normalizeLikedTrackIds,
+  normalizePlaylists,
   normalizeImportedTrack,
   parseFilenameMetadata,
   parseId3v2Metadata,

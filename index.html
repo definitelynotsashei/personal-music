@@ -95,12 +95,29 @@
           <button id="liked-tab" class="button button-secondary browse-tab" type="button" data-view="liked" aria-pressed="false">
             Liked
           </button>
+          <button id="playlists-tab" class="button button-secondary browse-tab" type="button" data-view="playlists" aria-pressed="false">
+            Playlists
+          </button>
           <button id="albums-tab" class="button button-secondary browse-tab" type="button" data-view="albums" aria-pressed="false">
             Albums
           </button>
           <button id="artists-tab" class="button button-secondary browse-tab" type="button" data-view="artists" aria-pressed="false">
             Artists
           </button>
+        </div>
+
+        <div id="playlist-controls" class="playlist-controls" hidden>
+          <label class="playlist-field">
+            <span class="summary-label">Create playlist</span>
+            <input id="playlist-name-input" type="text" placeholder="Rainy night mix" />
+          </label>
+          <button id="create-playlist-button" class="button button-primary" type="button">
+            Create Playlist
+          </button>
+          <label class="playlist-field">
+            <span class="summary-label">Add tracks into</span>
+            <select id="playlist-select"></select>
+          </label>
         </div>
 
         <div id="empty-state" class="empty-state">
@@ -112,6 +129,7 @@
         </div>
 
         <div id="track-list" class="track-list" hidden></div>
+        <div id="playlist-list" class="browse-grid" hidden></div>
         <div id="album-list" class="browse-grid" hidden></div>
         <div id="artist-list" class="browse-grid" hidden></div>
       </section>

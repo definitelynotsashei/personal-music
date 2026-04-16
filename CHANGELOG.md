@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - Playlists Slice
+
+### Features
+- Added the next personal-layer slice with persistent playlists, playlist creation, track assignment, and a dedicated playlist-library view.
+
+### Documentation
+- Advanced the roadmap and project state within the personal layer from liked songs into playlists.
+
+### Tests
+- Expanded regression coverage for playlist normalization and storage hydration.
+
 ## 2026-04-16 - Liked Songs Slice
 
 ### Features

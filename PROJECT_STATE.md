@@ -4,7 +4,7 @@ _Last updated 2026-04-16. For context-sharing, not a coding reference._
 ---
 
 ## In Progress
-Starting the personal layer: persistent liked songs with a dedicated liked view on top of the normalized library and current playback model.
+Starting the next personal-layer slice: persistent playlists with creation and track assignment on top of the normalized library and current playback model.
 
 ---
 
@@ -20,7 +20,7 @@ A local-first personal music player intended for your own library, with a focus 
 - Playback works for tracks imported in the current browser session, with session-local file access as the current source model.
 - Queue behavior works with explicit queue order instead of only the library sort order.
 - Library browsing works across tracks, albums, and artists instead of a single flat list.
-- The personal layer is starting with liked-song state that persists with the local library model.
+- The personal layer now includes persistent liked songs and is expanding into playlists.
 - The current UI direction is a cozy lo-fi study aesthetic with muted earthy tones, subtle texture, soft shadows, and calm motion.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
@@ -51,7 +51,7 @@ A local-first personal music player intended for your own library, with a focus 
 5. Personal layer.
 
 ### Current recommended next task
-- Finish the first personal-layer slice by adding persistent liked songs and a dedicated liked-library view.
+- Finish the next personal-layer slice by adding persistent playlists, playlist creation, and track assignment.
 
 ---
 
@@ -114,7 +114,7 @@ const libraryState = {
 - Persisted library metadata survives reloads, but playback sources currently require session-local imports until durable file access is added.
 - Queue state is currently session-local and will not survive reloads until player-state persistence is added deliberately.
 - Library browsing is still shallow; search and deeper navigation are separate follow-up work.
-- The personal layer currently starts with liked songs only; playlists and recently played are still follow-up work.
+- The personal layer currently includes liked songs; playlists are in progress and recently played is still follow-up work.
 
 ---
 

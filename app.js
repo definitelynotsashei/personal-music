@@ -3,6 +3,7 @@ import {
   canPlayTrack,
   createDefaultQueue,
   createLibrarySnapshot,
+  createPlaylistId,
   createShuffledQueue,
   formatDuration,
   getNextQueueIndex,
@@ -13,6 +14,7 @@ import {
   isSupportedAudioFile,
   LIBRARY_STORAGE_KEY,
   normalizeLikedTrackIds,
+  normalizePlaylists,
   parseStoredLibrary,
   sortTracks,
   summarizeLibrary
@@ -27,9 +29,14 @@ const artistCount = document.querySelector('#artist-count');
 const albumCount = document.querySelector('#album-count');
 const emptyState = document.querySelector('#empty-state');
 const trackList = document.querySelector('#track-list');
+const playlistList = document.querySelector('#playlist-list');
 const albumList = document.querySelector('#album-list');
 const artistList = document.querySelector('#artist-list');
 const browseTabs = document.querySelectorAll('.browse-tab');
+const playlistControls = document.querySelector('#playlist-controls');
+const playlistNameInput = document.querySelector('#playlist-name-input');
+const createPlaylistButton = document.querySelector('#create-playlist-button');
+const playlistSelect = document.querySelector('#playlist-select');
 const clearLibraryButton = document.querySelector('#clear-library');
 const audioPlayer = document.querySelector('#audio-player');
 const nowPlayingTitle = document.querySelector('#now-playing-title');
@@ -54,6 +61,8 @@ const queueNote = document.querySelector('#queue-note');
 const state = {
   tracks: [],
   likedTrackIds: [],
+  playlists: [],
+  selectedPlaylistId: null,
   importInFlight: false,
   lastSavedAt: null,
   browseView: 'tracks',
@@ -90,7 +99,11 @@ function saveLibrary() {
     return false;
   }
 
-  const snapshot = createLibrarySnapshot(state.tracks, state.likedTrackIds);
+  const snapshot = createLibrarySnapshot(
+    state.tracks,
+    state.likedTrackIds,
+    state.playlists
+  );
   state.lastSavedAt = snapshot.savedAt;
   window.localStorage.setItem(LIBRARY_STORAGE_KEY, JSON.stringify(snapshot));
   return true;
@@ -106,8 +119,10 @@ function loadStoredLibrary() {
   );
   state.tracks = storedLibrary.tracks;
   state.likedTrackIds = storedLibrary.likedTrackIds;
+  state.playlists = storedLibrary.playlists;
+  state.selectedPlaylistId = storedLibrary.playlists[0]?.id ?? null;
   state.lastSavedAt = storedLibrary.savedAt;
-  return storedLibrary.tracks.length > 0;
+  return storedLibrary.tracks.length > 0 || storedLibrary.playlists.length > 0;
 }
 
 function resetQueueFromTracks() {
@@ -123,6 +138,8 @@ function clearStoredLibrary() {
   revokeTrackSources(state.tracks);
   state.tracks = [];
   state.likedTrackIds = [];
+  state.playlists = [];
+  state.selectedPlaylistId = null;
   state.lastSavedAt = null;
   state.player.queue = [];
   state.player.queueIndex = -1;
@@ -140,8 +157,18 @@ function getCurrentTrack() {
   return getTrackById(state.player.currentTrackId);
 }
 
+function getPlaylistById(playlistId) {
+  return state.playlists.find(playlist => playlist.id === playlistId) ?? null;
+}
+
 function isLiked(trackId) {
   return state.likedTrackIds.includes(trackId);
+}
+
+function ensureSelectedPlaylist() {
+  if (!state.selectedPlaylistId || !getPlaylistById(state.selectedPlaylistId)) {
+    state.selectedPlaylistId = state.playlists[0]?.id ?? null;
+  }
 }
 
 function setStatus(message, tone = 'normal') {
@@ -189,6 +216,33 @@ function updateBrowseTabs() {
     const isActive = tab.dataset.view === state.browseView;
     tab.dataset.active = String(isActive);
     tab.setAttribute('aria-pressed', String(isActive));
+  });
+}
+
+function updatePlaylistControls() {
+  ensureSelectedPlaylist();
+  const showControls = state.browseView === 'playlists' || state.tracks.length > 0;
+  playlistControls.hidden = !showControls;
+
+  playlistSelect.innerHTML = '';
+  if (state.playlists.length === 0) {
+    const option = document.createElement('option');
+    option.textContent = 'Create a playlist first';
+    option.value = '';
+    playlistSelect.append(option);
+    playlistSelect.disabled = true;
+    return;
+  }
+
+  playlistSelect.disabled = false;
+  state.playlists.forEach(playlist => {
+    const option = document.createElement('option');
+    option.value = playlist.id;
+    option.textContent = playlist.name;
+    if (playlist.id === state.selectedPlaylistId) {
+      option.selected = true;
+    }
+    playlistSelect.append(option);
   });
 }
 
@@ -252,7 +306,7 @@ function updateNowPlaying() {
 
   if (canPlayTrack(currentTrack)) {
     playerNote.textContent =
-      'Playback is available for tracks imported in the current browser session. Likes persist with the local library model.';
+      'Playback is available for tracks imported in the current browser session. Likes and playlists persist with the local library model.';
   } else {
     playerNote.textContent =
       'This track was restored from the saved library index, but playback needs the original files to be imported again in this session.';
@@ -345,6 +399,9 @@ function renderTracksView(tracksToRender = state.tracks) {
         <button class="track-like-button button button-secondary" type="button" data-track-id="${track.id}" data-active="${liked}">
           ${liked ? 'Liked' : 'Like'}
         </button>
+        <button class="track-playlist-button button button-secondary" type="button" data-track-id="${track.id}">
+          Add To Playlist
+        </button>
         <button class="track-queue-button button button-secondary" type="button" data-track-id="${track.id}">
           Play Next
         </button>
@@ -419,18 +476,61 @@ function renderArtistsView() {
   artistList.hidden = false;
 }
 
+function renderPlaylistsView() {
+  playlistList.innerHTML = '';
+
+  if (state.playlists.length === 0) {
+    playlistList.hidden = true;
+    return;
+  }
+
+  const fragment = document.createDocumentFragment();
+
+  state.playlists.forEach(playlist => {
+    const playlistTracks = playlist.trackIds
+      .map(trackId => getTrackById(trackId))
+      .filter(Boolean);
+
+    const card = document.createElement('article');
+    card.className = 'browse-card';
+    if (playlist.id === state.selectedPlaylistId) {
+      card.dataset.current = 'true';
+    }
+    card.innerHTML = `
+      <p class="summary-label">Playlist</p>
+      <strong>${playlist.name}</strong>
+      <p class="browse-meta">${playlist.trackIds.length} track${playlist.trackIds.length === 1 ? '' : 's'}</p>
+      <button class="button button-secondary playlist-select-button" type="button" data-playlist-id="${playlist.id}">
+        ${playlist.id === state.selectedPlaylistId ? 'Selected Playlist' : 'Select Playlist'}
+      </button>
+      <div class="browse-chip-list">
+        ${playlistTracks
+          .slice(0, 5)
+          .map(track => `<button class="browse-chip" type="button" data-track-id="${track.id}">${track.title}</button>`)
+          .join('')}
+      </div>
+    `;
+    fragment.append(card);
+  });
+
+  playlistList.append(fragment);
+  playlistList.hidden = false;
+}
+
 function renderLikedView() {
   const likedTracks = state.tracks.filter(track => isLiked(track.id));
   renderTracksView(likedTracks);
 }
 
 function renderLibraryBrowser() {
-  clearLibraryButton.hidden = state.tracks.length === 0;
+  clearLibraryButton.hidden = state.tracks.length === 0 && state.playlists.length === 0;
   updateBrowseTabs();
+  updatePlaylistControls();
 
-  if (state.tracks.length === 0) {
+  if (state.tracks.length === 0 && state.playlists.length === 0) {
     emptyState.hidden = false;
     trackList.hidden = true;
+    playlistList.hidden = true;
     albumList.hidden = true;
     artistList.hidden = true;
     updateSummary();
@@ -439,8 +539,9 @@ function renderLibraryBrowser() {
     return;
   }
 
-  emptyState.hidden = true;
+  emptyState.hidden = state.tracks.length > 0 || state.playlists.length > 0;
   trackList.hidden = !['tracks', 'liked'].includes(state.browseView);
+  playlistList.hidden = state.browseView !== 'playlists';
   albumList.hidden = state.browseView !== 'albums';
   artistList.hidden = state.browseView !== 'artists';
 
@@ -448,6 +549,8 @@ function renderLibraryBrowser() {
     renderTracksView();
   } else if (state.browseView === 'liked') {
     renderLikedView();
+  } else if (state.browseView === 'playlists') {
+    renderPlaylistsView();
   } else if (state.browseView === 'albums') {
     renderAlbumsView();
   } else {
@@ -481,6 +584,8 @@ function mergeTracks(importedTracks) {
 
   state.tracks = sortTracks([...nextById.values()]);
   state.likedTrackIds = normalizeLikedTrackIds(state.likedTrackIds, state.tracks);
+  state.playlists = normalizePlaylists(state.playlists, state.tracks);
+  ensureSelectedPlaylist();
 
   if (state.player.shuffle && state.player.queue.length > 0) {
     state.player.queue = createShuffledQueue(
@@ -677,6 +782,70 @@ function toggleLike(trackId = state.player.currentTrackId) {
   );
 }
 
+function createPlaylist(name) {
+  const normalizedName = String(name || '').trim();
+  if (!normalizedName) {
+    setStatus('Enter a playlist name before creating it.', 'warning');
+    return;
+  }
+
+  const duplicate = state.playlists.find(
+    playlist => playlist.name.toLowerCase() === normalizedName.toLowerCase()
+  );
+  if (duplicate) {
+    state.selectedPlaylistId = duplicate.id;
+    renderLibraryBrowser();
+    setStatus(`Selected existing playlist "${duplicate.name}".`, 'warning');
+    return;
+  }
+
+  const playlist = {
+    id: createPlaylistId(normalizedName),
+    name: normalizedName,
+    trackIds: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  state.playlists = normalizePlaylists([...state.playlists, playlist], state.tracks);
+  state.selectedPlaylistId = playlist.id;
+  playlistNameInput.value = '';
+  saveLibrary();
+  renderLibraryBrowser();
+  setStatus(`Created playlist "${playlist.name}".`, 'success');
+}
+
+function addTrackToSelectedPlaylist(trackId) {
+  const track = getTrackById(trackId);
+  const playlist = getPlaylistById(state.selectedPlaylistId);
+  if (!track || !playlist) {
+    setStatus('Create or select a playlist first.', 'warning');
+    return;
+  }
+
+  if (playlist.trackIds.includes(track.id)) {
+    setStatus(`"${track.title}" is already in "${playlist.name}".`, 'warning');
+    return;
+  }
+
+  const nextPlaylists = state.playlists.map(entry => {
+    if (entry.id !== playlist.id) {
+      return entry;
+    }
+
+    return {
+      ...entry,
+      trackIds: [...entry.trackIds, track.id],
+      updatedAt: new Date().toISOString()
+    };
+  });
+
+  state.playlists = normalizePlaylists(nextPlaylists, state.tracks);
+  saveLibrary();
+  renderLibraryBrowser();
+  setStatus(`Added "${track.title}" to "${playlist.name}".`, 'success');
+}
+
 function cycleRepeatMode() {
   state.player.repeatMode =
     state.player.repeatMode === 'off'
@@ -746,7 +915,7 @@ async function handleImport(fileList) {
     const saved = saveLibrary();
     renderLibraryBrowser();
     setStatus(
-      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library and liked-song state were saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback, queue, browsing, and likes are available for the files imported in this session.`,
+      `Imported ${tracks.length} track${tracks.length === 1 ? '' : 's'} into the local library view.${saved ? ' The normalized library, likes, and playlists were saved locally for reloads.' : ' Local storage is unavailable, so this import is session-only.'} Playback, queue, browsing, likes, and playlists are available for the files imported in this session.`,
       'success'
     );
   } catch (error) {
@@ -763,6 +932,13 @@ async function handleImport(fileList) {
 }
 
 function handleTrackListClick(event) {
+  const playlistSelectButton = event.target.closest('.playlist-select-button');
+  if (playlistSelectButton) {
+    state.selectedPlaylistId = playlistSelectButton.dataset.playlistId || null;
+    renderLibraryBrowser();
+    return;
+  }
+
   const playButtonElement = event.target.closest('.track-play-button');
   if (playButtonElement) {
     togglePlayback(playButtonElement.dataset.trackId);
@@ -772,6 +948,12 @@ function handleTrackListClick(event) {
   const likeButtonElement = event.target.closest('.track-like-button');
   if (likeButtonElement) {
     toggleLike(likeButtonElement.dataset.trackId);
+    return;
+  }
+
+  const playlistButtonElement = event.target.closest('.track-playlist-button');
+  if (playlistButtonElement) {
+    addTrackToSelectedPlaylist(playlistButtonElement.dataset.trackId);
     return;
   }
 
@@ -864,10 +1046,22 @@ fileInput?.addEventListener('change', event => handleImport(event.target.files))
 folderInput?.addEventListener('change', event => handleImport(event.target.files));
 clearLibraryButton?.addEventListener('click', handleClearLibrary);
 trackList?.addEventListener('click', handleTrackListClick);
+playlistList?.addEventListener('click', handleTrackListClick);
 albumList?.addEventListener('click', handleTrackListClick);
 artistList?.addEventListener('click', handleTrackListClick);
 browseTabs.forEach(tab => {
   tab.addEventListener('click', () => setBrowseView(tab.dataset.view));
+});
+createPlaylistButton?.addEventListener('click', () => createPlaylist(playlistNameInput.value));
+playlistSelect?.addEventListener('change', event => {
+  state.selectedPlaylistId = event.target.value || null;
+  renderLibraryBrowser();
+});
+playlistNameInput?.addEventListener('keydown', event => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    createPlaylist(playlistNameInput.value);
+  }
 });
 likeButton?.addEventListener('click', () => toggleLike());
 playButton?.addEventListener('click', () => togglePlayback());
@@ -901,7 +1095,7 @@ if (loadStoredLibrary()) {
     state.player.queueIndex = 0;
   }
   setStatus(
-    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback, queue, and full browsing actions.',
+    'Loaded the locally saved library index for this browser. Re-import files in this session to enable playback and queue actions.',
     'success'
   );
 }
