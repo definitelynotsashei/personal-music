@@ -27,6 +27,15 @@ test('core project files exist', () => {
   });
 });
 
+test('mobile now-playing controls exist in the app shell', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+
+  assert.match(html, /id="player-panel"/);
+  assert.match(html, /id="open-expanded-player"/);
+  assert.match(html, /id="expand-player-button"/);
+  assert.match(html, /id="close-expanded-player"/);
+});
+
 test('filename parsing extracts fallback artist and title data', async () => {
   const moduleUrl = pathToFileURL(path.join(ROOT, 'src', 'library.js')).href;
   const { parseFilenameMetadata } = await import(moduleUrl);

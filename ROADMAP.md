@@ -116,7 +116,7 @@ Build local file import plus normalized track-library rendering, then make that 
 
 ### Current Recommended Task
 
-Build the next mobile-now-playing slice: tighten the expanded player and sticky bar behavior for narrow screens so playback remains comfortable during real daily use.
+Build the next PWA/offline polish slice: strengthen installable behavior and baseline offline resilience for the core app shell and current local-library flow.
 
 ### Current UI Direction
 

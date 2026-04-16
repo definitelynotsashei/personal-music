@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-04-16 - Mobile Now-Playing Polish Slice
+
+### Features
+- Tightened narrow-screen playback UX by turning the full player into a mobile-expanded listening room with explicit open and close controls from the sticky bar.
+
+### Documentation
+- Advanced the roadmap and project state from mobile now-playing polish into the next PWA/offline slice.
+
+### Tests
+- Expanded regression coverage to confirm the mobile now-playing controls are present in the app shell.
+
 ## 2026-04-16 - Search Slice
 
 ### Features

@@ -152,12 +152,19 @@
         <div id="artist-list" class="browse-grid" hidden></div>
       </section>
 
-      <section class="panel player-panel">
+      <section id="player-panel" class="panel player-panel" data-mobile-open="false">
         <div class="panel-heading">
           <div>
             <p class="section-label">Now Playing</p>
             <h2>Now playing</h2>
           </div>
+          <button id="close-expanded-player" class="icon-button icon-button-secondary close-player-button" type="button" aria-label="Close now playing view">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 7 L17 17" />
+              <path d="M17 7 L7 17" />
+            </svg>
+            <span class="sr-only">Close now playing view</span>
+          </button>
         </div>
 
         <div class="player-shell expanded-player-shell">
@@ -224,7 +231,7 @@
         <span id="sticky-album-art-mark">LP</span>
       </div>
 
-      <div class="sticky-player-copy">
+      <button id="open-expanded-player" class="sticky-player-copy sticky-player-open" type="button" aria-label="Open now playing view">
         <strong id="now-playing-title">Nothing playing</strong>
         <p id="now-playing-meta" class="track-player-meta">
           Import local files to start playback.
@@ -235,9 +242,15 @@
           <span></span>
           <span></span>
         </div>
-      </div>
+      </button>
 
       <div class="sticky-player-controls">
+        <button id="expand-player-button" class="icon-button icon-button-secondary expand-player-button" type="button" aria-label="Open now playing view">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 14 L12 8 L18 14" />
+          </svg>
+          <span class="sr-only">Open now playing view</span>
+        </button>
         <button id="like-button" class="icon-button icon-button-secondary like-button" type="button" aria-label="Like track">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M12 20 C10 18.2, 6.3 15.6, 4.8 12.6 C3.5 10, 4.2 6.9, 7.1 6.1 C9.2 5.5, 10.8 6.7, 12 8.2 C13.2 6.7, 14.8 5.5, 16.9 6.1 C19.8 6.9, 20.5 10, 19.2 12.6 C17.7 15.6, 14 18.2, 12 20 Z" />

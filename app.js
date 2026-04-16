@@ -44,6 +44,10 @@ const createPlaylistButton = document.querySelector('#create-playlist-button');
 const playlistSelect = document.querySelector('#playlist-select');
 const clearLibraryButton = document.querySelector('#clear-library');
 const audioPlayer = document.querySelector('#audio-player');
+const playerPanel = document.querySelector('#player-panel');
+const openExpandedPlayerButton = document.querySelector('#open-expanded-player');
+const expandPlayerButton = document.querySelector('#expand-player-button');
+const closeExpandedPlayerButton = document.querySelector('#close-expanded-player');
 const stickyPlayer = document.querySelector('#sticky-player');
 const stickyAlbumArt = document.querySelector('#sticky-album-art');
 const stickyAlbumArtMark = document.querySelector('#sticky-album-art-mark');
@@ -100,6 +104,8 @@ const state = {
   lastSavedAt: null,
   browseView: 'tracks',
   searchQuery: '',
+  mobilePlayerOpen: false,
+  compactPlayerMode: false,
   player: {
     currentTrackId: null,
     paused: true,
@@ -111,6 +117,50 @@ const state = {
     shuffle: false
   }
 };
+
+function updatePlayerShellMode() {
+  const compactPlayerMode = window.matchMedia('(max-width: 760px)').matches;
+  state.compactPlayerMode = compactPlayerMode;
+
+  if (!compactPlayerMode) {
+    state.mobilePlayerOpen = false;
+  }
+
+  document.body.classList.toggle(
+    'player-overlay-open',
+    state.compactPlayerMode && state.mobilePlayerOpen
+  );
+  playerPanel.dataset.mobile = String(compactPlayerMode);
+  playerPanel.dataset.mobileOpen = String(state.mobilePlayerOpen);
+  stickyPlayer.dataset.compact = String(compactPlayerMode);
+  stickyPlayer.dataset.expanded = String(state.mobilePlayerOpen);
+  openExpandedPlayerButton?.setAttribute(
+    'aria-expanded',
+    String(state.compactPlayerMode && state.mobilePlayerOpen)
+  );
+  expandPlayerButton?.setAttribute(
+    'aria-expanded',
+    String(state.compactPlayerMode && state.mobilePlayerOpen)
+  );
+}
+
+function openExpandedPlayer() {
+  if (!state.compactPlayerMode) {
+    return;
+  }
+
+  state.mobilePlayerOpen = true;
+  updatePlayerShellMode();
+}
+
+function closeExpandedPlayer() {
+  if (!state.compactPlayerMode) {
+    return;
+  }
+
+  state.mobilePlayerOpen = false;
+  updatePlayerShellMode();
+}
 
 function canUseLocalStorage() {
   try {
@@ -1266,6 +1316,7 @@ function handleClearLibrary() {
   state.player.repeatMode = 'off';
   state.player.shuffle = false;
   state.browseView = 'tracks';
+  closeExpandedPlayer();
   renderLibraryBrowser();
   setStatus('Cleared the locally stored library index for this browser.', 'warning');
 }
@@ -1333,6 +1384,13 @@ async function registerServiceWorker() {
   }
 }
 
+window.addEventListener('resize', updatePlayerShellMode);
+window.addEventListener('keydown', event => {
+  if (event.key === 'Escape') {
+    closeExpandedPlayer();
+  }
+});
+
 fileInput?.addEventListener('change', event => handleImport(event.target.files));
 folderInput?.addEventListener('change', event => handleImport(event.target.files));
 clearLibraryButton?.addEventListener('click', handleClearLibrary);
@@ -1364,6 +1422,10 @@ playlistNameInput?.addEventListener('keydown', event => {
     createPlaylist(playlistNameInput.value);
   }
 });
+openExpandedPlayerButton?.addEventListener('click', openExpandedPlayer);
+expandPlayerButton?.addEventListener('click', openExpandedPlayer);
+stickyAlbumArt?.addEventListener('click', openExpandedPlayer);
+closeExpandedPlayerButton?.addEventListener('click', closeExpandedPlayer);
 likeButton?.addEventListener('click', () => toggleLike());
 playButton?.addEventListener('click', () => togglePlayback());
 previousButton?.addEventListener('click', () => stepQueue(-1));
@@ -1388,6 +1450,7 @@ volumeInput?.addEventListener('input', event => {
 });
 
 registerPlayerEvents();
+updatePlayerShellMode();
 
 if (loadStoredLibrary()) {
   resetQueueFromTracks();

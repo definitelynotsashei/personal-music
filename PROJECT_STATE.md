@@ -4,7 +4,7 @@ _Last updated 2026-04-16. For context-sharing, not a coding reference._
 ---
 
 ## In Progress
-Starting the next mobile-now-playing slice: tightening the sticky player and expanded playback view for narrow-screen daily use.
+Starting the next PWA/offline polish slice: improving installability and baseline offline resilience for the core app shell.
 
 ---
 
@@ -22,7 +22,7 @@ A local-first personal music player intended for your own library, with a focus 
 - Library browsing works across tracks, albums, and artists instead of a single flat list.
 - The personal layer now includes persistent liked songs, playlists, and recently played history.
 - The first search slice now supports ranked library search across tracks, albums, artists, playlists, and liked music.
-- The current UI direction is a cozy late-night listening-den aesthetic with muted earthy tones, soft glass panels, hand-drawn iconography, a sticky bottom player bar, and calm motion.
+- The current UI direction is a cozy late-night listening-den aesthetic with muted earthy tones, soft glass panels, hand-drawn iconography, a sticky bottom player bar, calm motion, and a mobile-expanded now-playing room.
 - Tests cover project-baseline file presence and core library-normalization and storage helpers.
 
 ### Current product snapshot
@@ -52,7 +52,7 @@ A local-first personal music player intended for your own library, with a focus 
 5. Personal layer.
 
 ### Current recommended next task
-- Tighten the mobile-now-playing slice so the sticky player and expanded view feel better on narrow screens.
+- Improve the next PWA/offline polish slice so the app shell feels more installable and resilient.
 
 ---
 
@@ -114,7 +114,7 @@ const libraryState = {
 - Audio file handles and richer persistent access are still to be designed beyond the initial imported library index.
 - Persisted library metadata survives reloads, but playback sources currently require session-local imports until durable file access is added.
 - Queue state is currently session-local and will not survive reloads until player-state persistence is added deliberately.
-- Search is now present, but mobile-now-playing polish is still needed for stronger narrow-screen daily use.
+- Search is now present, and mobile now-playing is stronger on narrow screens, but PWA/offline polish is still needed for a stronger installable feel.
 
 ---
 
